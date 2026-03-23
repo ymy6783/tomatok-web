@@ -62,6 +62,27 @@ body {
   background-size: 200% 200%;
 }
 
+.membership-case-prism {
+  position: absolute;
+  overflow: hidden;
+}
+
+.membership-case-prism::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background: conic-gradient(
+    from 120deg at 50% 50%,
+    rgba(255, 255, 255, 0.14),
+    rgba(168, 85, 247, 0.4),
+    rgba(34, 211, 238, 0.45),
+    rgba(251, 191, 36, 0.42),
+    rgba(255, 255, 255, 0.14)
+  );
+  filter: blur(18px);
+  animation: membership-case-flow 8s linear infinite;
+}
+
 @keyframes membership-detail {
   0% {
     opacity: 0;
@@ -80,5 +101,23 @@ body {
   }
   50% {
     transform: rotateY(4deg);
+  }
+}
+
+@keyframes membership-card-spin {
+  0% {
+    transform: rotateY(0deg);
+  }
+  100% {
+    transform: rotateY(360deg);
+  }
+}
+
+@keyframes membership-case-flow {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  100% {
+    transform: rotate(360deg) scale(1.06);
   }
 }

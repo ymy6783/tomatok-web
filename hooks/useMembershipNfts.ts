@@ -15,6 +15,11 @@ type HeliusResponse = {
   };
 };
 
+type UsageResponse = {
+  usages?: Record<string, { usedCount: number; maxUsage: number }>;
+  error?: string;
+};
+
 export function useMembershipNfts(ownerAddress: string) {
   const [items, setItems] = useState<MembershipCardAsset[]>([]);
   const [loading, setLoading] = useState(false);
@@ -63,7 +68,39 @@ export function useMembershipNfts(ownerAddress: string) {
 
       const heliusItems = Array.isArray(data?.result?.items) ? data.result.items : [];
       const filtered = filterMembershipNfts(heliusItems);
-      setItems(filtered);
+      if (filtered.length === 0) {
+        setItems([]);
+        return;
+      }
+
+      const mints = filtered.map((item) => item.mint).filter(Boolean);
+      const usageRes = await fetch("/api/membership/cards/usage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ walletAddress: ownerAddress, mints }),
+      });
+      const usageData = (await usageRes.json()) as UsageResponse;
+      if (!usageRes.ok) {
+        throw new Error(usageData.error ?? "사용횟수 조회에 실패했습니다.");
+      }
+
+      const withUsage = filtered.map((item) => {
+        const usage = usageData.usages?.[item.mint];
+        if (!usage) return item;
+        const raw = item.rawAsset && typeof item.rawAsset === "object" ? (item.rawAsset as Record<string, unknown>) : {};
+        return {
+          ...item,
+          rawAsset: {
+            ...raw,
+            used_count: usage.usedCount,
+            max_usage: usage.maxUsage,
+            usage_count: usage.usedCount,
+            usage_limit: usage.maxUsage,
+          },
+        };
+      });
+
+      setItems(withUsage);
     } catch (e) {
       setItems([]);
       setError(e instanceof Error ? e.message : "NFT 조회 중 오류가 발생했습니다.");

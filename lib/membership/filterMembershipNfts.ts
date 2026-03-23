@@ -5,6 +5,7 @@ type UnknownRecord = Record<string, unknown>;
 
 export type MembershipCardAsset = {
   id: string;
+  mint: string;
   image: string;
   title: string;
   seriesName: string;
@@ -103,15 +104,40 @@ function extractSeriesName(asset: UnknownRecord): string {
   const metadata = asRecord(content.metadata);
   const collection = asRecord(asset.collection);
   const grouping = asArray(asset.grouping);
-  const firstGrouping = asRecord(grouping[0]);
+  const metadataCollection = asRecord(metadata.collection);
 
-  return (
-    text(collection.name) ||
-    text(collection.family) ||
-    text(metadata.collection) ||
-    text(firstGrouping.group_value) ||
-    "TOMAKONGZ"
-  );
+  const fromGrouping = grouping
+    .map((g) => asRecord(g))
+    .filter((g) => {
+      const key = normalize(g.group_key);
+      return key.includes("collection") || key.includes("family") || key.includes("group");
+    })
+    .map((g) => text(g.group_value));
+
+  const candidates = [
+    text(collection.name),
+    text(collection.family),
+    text(metadataCollection.name),
+    text(metadataCollection.family),
+    text(metadata.collection),
+    ...fromGrouping,
+  ]
+    .map((v) => v.trim())
+    .filter(Boolean);
+
+  const cleaned = candidates.filter((v) => {
+    // 내부 식별자/주소/URI처럼 보이는 값은 시리즈명 후보에서 제외
+    if (v.length < 3 || v.length > 80) return false;
+    if (/[/:\\]/.test(v)) return false;
+    if (/^[a-f0-9]{24,}$/i.test(v)) return false;
+    if (/^[A-Za-z0-9_-]{24,}$/.test(v)) return false;
+    return true;
+  });
+
+  const tomakongzFirst = cleaned.find(includesTomakongz);
+  if (tomakongzFirst) return tomakongzFirst;
+  if (cleaned.length > 0) return cleaned[0];
+  return "TOMAKONGZ";
 }
 
 export function filterMembershipNfts(items: unknown[]): MembershipCardAsset[] {
@@ -131,6 +157,7 @@ export function filterMembershipNfts(items: unknown[]): MembershipCardAsset[] {
         text(asset.id) ||
         text(asset.mint) ||
         `${extractTitle(asset)}-${extractImage(asset)}`,
+      mint: text(asset.mint) || text(asset.id),
       image: extractImage(asset),
       title: extractTitle(asset),
       seriesName: extractSeriesName(asset),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type PhantomProvider = {
   isPhantom?: boolean;
@@ -20,11 +20,13 @@ export function usePhantomWallet() {
   const [walletAddress, setWalletAddress] = useState<string>("");
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string>("");
+  const [mounted, setMounted] = useState(false);
+  const [isPhantomInstalled, setIsPhantomInstalled] = useState(false);
 
-  const isPhantomInstalled = useMemo(
-    () => typeof window !== "undefined" && !!window.solana?.isPhantom,
-    []
-  );
+  useEffect(() => {
+    setMounted(true);
+    setIsPhantomInstalled(!!window.solana?.isPhantom);
+  }, []);
 
   const connect = useCallback(async () => {
     setError("");
@@ -53,6 +55,7 @@ export function usePhantomWallet() {
   }, []);
 
   return {
+    mounted,
     isPhantomInstalled,
     walletAddress,
     connecting,
