@@ -1,5 +1,13 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { NavBar } from "@/components/home/NavBar";
 import { SiteFooter } from "@/components/home/SiteFooter";
+import { ConnectPhantomButton } from "@/components/membership/ConnectPhantomButton";
+import { NftCardList } from "@/components/membership/NftCardList";
+import { NFTCardAnimated } from "@/components/membership/NFTCardAnimated";
+import { useMembershipNfts } from "@/hooks/useMembershipNfts";
+import { usePhantomWallet } from "@/hooks/usePhantomWallet";
 
 const BASE_BENEFITS = [
   "클램핑장 현장 예약 할인",
@@ -30,6 +38,23 @@ const TIERS = [
 ] as const;
 
 export default function MembershipPage() {
+  const { walletAddress, isPhantomInstalled, connecting, error: walletError, connect } = usePhantomWallet();
+  const { items, loading, error: nftError, refetch } = useMembershipNfts(walletAddress);
+  const [selectedId, setSelectedId] = useState<string>("");
+
+  useEffect(() => {
+    if (!items.length) {
+      setSelectedId("");
+      return;
+    }
+    if (!items.some((item) => item.id === selectedId)) {
+      setSelectedId(items[0].id);
+    }
+  }, [items, selectedId]);
+
+  const selectedItem = items.find((item) => item.id === selectedId) ?? null;
+  const showDetail = !!selectedItem;
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <NavBar />
@@ -128,6 +153,85 @@ export default function MembershipPage() {
               </li>
             ))}
           </ul>
+        </section>
+
+        <section className="mb-24 rounded-2xl border border-slate-800 bg-black/30 p-6 sm:p-8 lg:mb-28">
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-white sm:text-3xl">멤버십 인증</h2>
+              <p className="mt-2 text-sm text-slate-400">
+                Phantom 연결 후 Helius에서 TOMAKONGZ 멤버십 NFT를 조회합니다.
+              </p>
+            </div>
+            {walletAddress && (
+              <button
+                type="button"
+                onClick={refetch}
+                disabled={loading}
+                className="rounded-lg border border-slate-600 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:border-slate-400 hover:text-white disabled:opacity-60"
+              >
+                {loading ? "조회 중..." : "다시 조회"}
+              </button>
+            )}
+          </div>
+
+          {!walletAddress && (
+            <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-6">
+              {!isPhantomInstalled && (
+                <p className="mb-4 text-sm text-amber-300">
+                  Phantom 지갑이 감지되지 않았습니다. 브라우저에 Phantom 확장 프로그램을 설치해 주세요.
+                </p>
+              )}
+              <ConnectPhantomButton connecting={connecting} onConnect={connect} />
+              {walletError && <p className="mt-4 text-sm text-rose-400">{walletError}</p>}
+            </div>
+          )}
+
+          {walletAddress && (
+            <div>
+              <div className="mb-5 rounded-lg border border-slate-700 bg-slate-900/50 px-4 py-3 text-xs text-slate-400">
+                연결 지갑: <span className="font-mono text-slate-200">{walletAddress}</span>
+              </div>
+
+              {loading && (
+                <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-8 text-center text-slate-400">
+                  Helius에서 NFT를 조회 중입니다...
+                </div>
+              )}
+
+              {!loading && nftError && (
+                <div className="rounded-xl border border-rose-900/60 bg-rose-950/20 p-6 text-sm text-rose-300">
+                  {nftError}
+                </div>
+              )}
+
+              {!loading && !nftError && items.length === 0 && (
+                <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-8 text-center text-slate-400">
+                  조건을 만족하는 TOMAKONGZ 멤버십 NFT가 없습니다.
+                </div>
+              )}
+
+              {!loading && !nftError && items.length > 0 && !showDetail && (
+                <div>
+                  <p className="mb-4 text-sm text-slate-400">카드를 선택하면 인증 상세 UI로 전환됩니다.</p>
+                  <NftCardList items={items} selectedId={selectedId} onSelect={setSelectedId} />
+                </div>
+              )}
+
+              {!loading && !nftError && showDetail && selectedItem && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedId("")}
+                    className="mb-5 rounded-lg border border-slate-600 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:border-slate-400 hover:text-white"
+                  >
+                    목록으로 돌아가기
+                  </button>
+                  <NFTCardAnimated item={selectedItem} />
+                </div>
+              )}
+            </div>
+          )}
         </section>
 
         {/* 4) 멤버십 사용방법 */}
