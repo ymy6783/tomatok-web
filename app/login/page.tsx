@@ -1,43 +1,81 @@
 "use client";
 
-import { supabase } from "@/lib/supabase";
+import Link from "next/link";
 import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [message, setMessage] = useState("");
 
-  const handleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-    });
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus("loading");
+    setMessage("");
 
-    if (error) {
-      alert("로그인 실패");
-    } else {
-      alert("이메일 확인하세요!");
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        setStatus("error");
+        setMessage(error.message || "로그인에 실패했습니다.");
+        return;
+      }
+      window.location.href = "/notice";
+    } catch (err) {
+      setStatus("error");
+      setMessage(err instanceof Error ? err.message : "로그인에 실패했습니다.");
     }
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold mb-6">로그인</h1>
+    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
+      <div className="w-full max-w-sm rounded-xl border border-slate-800 bg-slate-900/50 p-8">
+        <h1 className="mb-6 text-xl font-bold text-white">로그인</h1>
 
-        <input
-          type="email"
-          placeholder="이메일 입력"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="border p-2 rounded mb-4 w-64"
-        />
+        <form onSubmit={handleLogin} className="space-y-4">
+          <input
+            type="email"
+            placeholder="이메일"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            disabled={status === "loading"}
+            className="w-full rounded-md border border-slate-600 bg-slate-950 px-4 py-3 text-slate-200 placeholder:text-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+          />
+          <input
+            type="password"
+            placeholder="비밀번호"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            disabled={status === "loading"}
+            className="w-full rounded-md border border-slate-600 bg-slate-950 px-4 py-3 text-slate-200 placeholder:text-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+          />
 
-        <button
-          onClick={handleLogin}
-          className="bg-black text-white px-4 py-2 rounded"
+          <button
+            type="submit"
+            disabled={status === "loading"}
+            className="w-full rounded-md bg-white py-3 text-sm font-medium text-slate-950 hover:bg-slate-200 disabled:opacity-50"
+          >
+            {status === "loading" ? "로그인 중…" : "로그인"}
+          </button>
+        </form>
+
+        {message && (
+          <p className="mt-4 text-sm text-red-400">{message}</p>
+        )}
+
+        <Link
+          href="/"
+          className="mt-6 block text-center text-sm text-slate-400 hover:text-white"
         >
-          이메일 로그인
-        </button>
+          메인으로
+        </Link>
       </div>
-    </main>
+    </div>
   );
 }

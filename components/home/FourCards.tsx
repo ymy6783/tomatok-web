@@ -19,7 +19,7 @@ const cards = [
 
 export function FourCards() {
   return (
-    <section className="border-t border-neutral-800 bg-black py-16 sm:py-20">
+    <section className="bg-black py-16 sm:py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {cards.map((c) => (

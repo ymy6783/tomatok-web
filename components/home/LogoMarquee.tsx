@@ -4,8 +4,7 @@ import { siteImages } from "@/lib/site-images";
 export function LogoMarquee() {
   const row = [...siteImages.section6, ...siteImages.section6];
   return (
-    <section className="border-t border-slate-800/80 bg-slate-900/30 py-14 sm:py-16">
-      {/* 7) Partners & Ecosystem — 슬라이드 박스(로고 영역)만 화이트 배경 */}
+    <section className="bg-slate-900/30 py-14 sm:py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <p className="mb-8 text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
           Partners &amp; Ecosystem

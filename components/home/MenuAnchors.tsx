@@ -1,7 +1,7 @@
 export function MenuAnchors() {
   return (
     <section
-      className="border-b border-slate-800/60 bg-slate-950/80"
+      className="bg-slate-950/80"
       aria-label="Whitepaper 및 Membership placeholder"
     >
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-10 gap-y-2 px-4 py-3 text-center sm:px-6">

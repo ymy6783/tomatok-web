@@ -38,3 +38,18 @@ body {
 .animate-marquee {
   animation: home-marquee 32s linear infinite;
 }
+
+@keyframes nft-card-prism {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.nft-card-prism {
+  animation: nft-card-prism 10s ease-in-out infinite;
+  background-size: 200% 200%;
+}

@@ -4,7 +4,7 @@ import { siteImages } from "@/lib/site-images";
 const cards = [
   {
     title: "CHAT",
-    image: siteImages.section5Card1,
+    image: siteImages.section5_img1,
     lines: [
       "블록체인 기술 기반의 채팅 메신저",
       "모국어로 보내도 상대방의 언어로 번역(80여 국가 언어 지원)",
@@ -14,7 +14,7 @@ const cards = [
   },
   {
     title: "BaaS(바스)",
-    image: siteImages.section5Card2,
+    image: siteImages.section5_img2,
     lines: [
       "Blockchain as a Service = BaaS",
       "블록체인 개발자 커뮤니티 서비스 제공",
@@ -24,7 +24,7 @@ const cards = [
   },
   {
     title: "WALLET",
-    image: siteImages.section5Card3,
+    image: siteImages.section5_img3,
     lines: [
       "BRC-20 & 솔라나 토큰 월렛 • De-fi 기반 블록체인 서비스 지원(커스터디, 스테이킹)",
       "NFT 마켓플레이스&스토리지 지원 예정",
@@ -33,7 +33,7 @@ const cards = [
   },
   {
     title: "GAME",
-    image: siteImages.section5Card4,
+    image: siteImages.section5_img4,
     lines: [
       "솔라나 기반 블록체인 게임 론칭",
       "솔라나 계열 토큰 서비스 지원",
@@ -45,7 +45,7 @@ const cards = [
 
 export function IntroStrengths() {
   return (
-    <section className="border-t border-neutral-800 bg-black py-16 sm:py-20">
+    <section className="bg-black py-16 sm:py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="flex flex-col items-center text-center">
           <Image

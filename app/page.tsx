@@ -7,7 +7,6 @@ import { RelatedSites } from "@/components/home/RelatedSites";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SplitFeature } from "@/components/home/SplitFeature";
 import { MenuAnchors } from "@/components/home/MenuAnchors";
-import { TitleGridSection } from "@/components/home/TitleGridSection";
 
 export default function Home() {
   return (
@@ -18,7 +17,6 @@ export default function Home() {
       <FourCards />
       <BigImageSection />
       <IntroStrengths />
-      <TitleGridSection />
       <LogoMarquee />
       <RelatedSites />
       <SiteFooter />

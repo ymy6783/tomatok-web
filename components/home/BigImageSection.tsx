@@ -3,7 +3,7 @@ import { siteImages } from "@/lib/site-images";
 
 export function BigImageSection() {
   return (
-    <section className="border-t border-neutral-800 bg-black py-12 sm:py-16">
+    <section className="bg-black py-12 sm:py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="overflow-hidden rounded-2xl">
           <Image
