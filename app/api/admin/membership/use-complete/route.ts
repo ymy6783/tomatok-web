@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/service";
 import { isExpired, toIso } from "@/lib/membership/authSession";
 
 type Body = {
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "sessionId가 필요합니다." }, { status: 400 });
     }
 
-    const supabase = await createClient();
+    const supabase = createServiceRoleClient();
     const now = new Date();
 
     const { data: session, error: sessionError } = await supabase

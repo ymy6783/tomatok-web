@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/service";
 import { isExpired } from "@/lib/membership/authSession";
 
 type Params = { params: Promise<{ id: string }> };
@@ -11,7 +11,7 @@ export async function GET(_req: Request, { params }: Params) {
       return NextResponse.json({ error: "세션 id가 필요합니다." }, { status: 400 });
     }
 
-    const supabase = await createClient();
+    const supabase = createServiceRoleClient();
 
     const { data: session, error } = await supabase
       .from("membership_auth_sessions")

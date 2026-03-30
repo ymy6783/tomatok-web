@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/service";
 import {
   AUTH_SESSION_MINUTES,
   DEFAULT_USAGE_LIMIT,
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "walletAddress와 nftMint가 필요합니다." }, { status: 400 });
     }
 
-    const supabase = await createClient();
+    const supabase = createServiceRoleClient();
     const now = new Date();
 
     // 카드 조회 (없으면 기본값으로 등록)

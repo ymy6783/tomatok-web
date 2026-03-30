@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/service";
 
 type Body = {
   walletAddress?: string;
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ usages: {} });
     }
 
-    const supabase = await createClient();
+    const supabase = createServiceRoleClient();
     const { data, error } = await supabase
       .from("membership_cards")
       .select("nft_mint, usage_count, usage_limit")
