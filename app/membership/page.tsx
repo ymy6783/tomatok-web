@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { NavBar } from "@/components/home/NavBar";
 import { SiteFooter } from "@/components/home/SiteFooter";
-import { ConnectPhantomButton } from "@/components/membership/ConnectPhantomButton";
 import { NftCardList } from "@/components/membership/NftCardList";
 import { NFTCardAnimated } from "@/components/membership/NFTCardAnimated";
 import { getUsageSummary } from "@/lib/membership/getUsageSummary";
@@ -40,12 +39,10 @@ const TIERS = [
 ] as const;
 
 export default function MembershipPage() {
-  const { mounted, walletAddress, isPhantomInstalled, connecting, error: walletError, connect } =
-    usePhantomWallet();
+  const { mounted, walletAddress, isPhantomInstalled } = usePhantomWallet();
   const { items, loading, error: nftError, refetch } = useMembershipNfts(walletAddress);
   const authSession = useMembershipAuthSession();
   const [selectedId, setSelectedId] = useState<string>("");
-  const [authStarted, setAuthStarted] = useState(false);
   const [usageOverrides, setUsageOverrides] = useState<Record<string, { usedCount: number; maxUsage: number }>>({});
 
   const displayItems = useMemo(() => {
@@ -67,10 +64,39 @@ export default function MembershipPage() {
   const selectedItem = displayItems.find((item) => item.id === selectedId) ?? null;
   const showDetail = !!selectedItem;
 
-  const handleStartAuth = async () => {
-    setAuthStarted(true);
-    await connect();
-  };
+  if (!walletAddress) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100">
+        <NavBar />
+
+        <main className="mx-auto flex w-full max-w-6xl flex-1 items-center px-4 py-20 sm:px-6 sm:py-28">
+          <section className="w-full rounded-3xl border border-slate-800 bg-black/40 p-8 sm:p-12">
+            <div className="max-w-3xl">
+              <p className="mb-4 text-sm font-semibold uppercase tracking-[0.22em] text-cyan-300">
+                Membership Access
+              </p>
+              <h1 className="text-3xl font-bold leading-tight text-white sm:text-5xl">
+                팬텀 지갑 연결 후에만
+                <br />
+                멤버십 페이지를 확인할 수 있습니다
+              </h1>
+              <p className="mt-6 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
+                상단바의 팬텀 버튼으로 지갑을 연결하면 멤버십 NFT 조회와 현장 인증 기능이 활성화됩니다.
+              </p>
+
+              {mounted && !isPhantomInstalled && (
+                <p className="mt-6 rounded-2xl border border-amber-900/40 bg-amber-950/20 px-5 py-4 text-sm text-amber-200">
+                  Phantom 지갑이 감지되지 않았습니다. 상단바 버튼을 눌러 Phantom을 설치한 뒤 다시 접속해 주세요.
+                </p>
+              )}
+            </div>
+          </section>
+        </main>
+
+        <SiteFooter />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -192,166 +218,137 @@ export default function MembershipPage() {
             )}
           </div>
 
-          {!authStarted && (
-            <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-6">
-              <p className="mb-4 text-sm text-slate-400">
-                인증 완료 전에는 NFT 목록이 표시되지 않습니다. 먼저 Phantom 지갑을 연결해 주세요.
-              </p>
-              {mounted && !isPhantomInstalled && (
-                <p className="mb-4 text-sm text-amber-300">
-                  Phantom 지갑이 감지되지 않았습니다. 브라우저에 Phantom 확장 프로그램을 설치해 주세요.
-                </p>
-              )}
-              <ConnectPhantomButton connecting={connecting} onConnect={handleStartAuth} />
-              {walletError && <p className="mt-4 text-sm text-rose-400">{walletError}</p>}
+          <div>
+            <div className="mb-5 rounded-lg border border-slate-700 bg-slate-900/50 px-4 py-3 text-xs text-slate-400">
+              연결 지갑: <span className="font-mono text-slate-200">{walletAddress}</span>
             </div>
-          )}
 
-          {authStarted && !walletAddress && (
-            <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-6">
-              {mounted && !isPhantomInstalled && (
-                <p className="mb-4 text-sm text-amber-300">
-                  Phantom 지갑이 감지되지 않았습니다. 브라우저에 Phantom 확장 프로그램을 설치해 주세요.
-                </p>
-              )}
-              <ConnectPhantomButton connecting={connecting} onConnect={handleStartAuth} />
-              {walletError && <p className="mt-4 text-sm text-rose-400">{walletError}</p>}
-            </div>
-          )}
-
-          {authStarted && walletAddress && (
-            <div>
-              <div className="mb-5 rounded-lg border border-slate-700 bg-slate-900/50 px-4 py-3 text-xs text-slate-400">
-                연결 지갑: <span className="font-mono text-slate-200">{walletAddress}</span>
+            {loading && (
+              <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-8 text-center text-slate-400">
+                Helius에서 NFT를 조회 중입니다...
               </div>
+            )}
 
-              {loading && (
-                <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-8 text-center text-slate-400">
-                  Helius에서 NFT를 조회 중입니다...
-                </div>
-              )}
+            {!loading && nftError && (
+              <div className="rounded-xl border border-rose-900/60 bg-rose-950/20 p-6 text-sm text-rose-300">
+                {nftError}
+              </div>
+            )}
 
-              {!loading && nftError && (
-                <div className="rounded-xl border border-rose-900/60 bg-rose-950/20 p-6 text-sm text-rose-300">
-                  {nftError}
-                </div>
-              )}
+            {!loading && !nftError && items.length === 0 && (
+              <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-8 text-center text-slate-400">
+                조건을 만족하는 TOMAKONGZ 멤버십 NFT가 없습니다.
+              </div>
+            )}
 
-              {!loading && !nftError && items.length === 0 && (
-                <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-8 text-center text-slate-400">
-                  조건을 만족하는 TOMAKONGZ 멤버십 NFT가 없습니다.
-                </div>
-              )}
+            {!loading && !nftError && items.length > 0 && !showDetail && (
+              <div>
+                <p className="mb-4 text-sm text-slate-400">카드를 선택하면 인증 상세 UI로 전환됩니다.</p>
+                <NftCardList
+                  items={displayItems}
+                  selectedId={selectedId}
+                  onSelect={(id) => {
+                    authSession.reset();
+                    setSelectedId(id);
+                  }}
+                />
+              </div>
+            )}
 
-              {!loading && !nftError && items.length > 0 && !showDetail && (
-                <div>
-                  <p className="mb-4 text-sm text-slate-400">카드를 선택하면 인증 상세 UI로 전환됩니다.</p>
-                      <NftCardList
-                        items={displayItems}
-                        selectedId={selectedId}
-                        onSelect={(id) => {
-                          authSession.reset();
-                          setSelectedId(id);
-                        }}
-                      />
-                </div>
-              )}
-
-              {!loading && !nftError && showDetail && selectedItem && (
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      authSession.reset();
-                      setSelectedId("");
-                    }}
-                    className="mb-5 rounded-lg border border-slate-600 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:border-slate-400 hover:text-white"
-                  >
-                    목록으로 돌아가기
-                  </button>
-                  <div className="mb-5 rounded-xl border border-slate-700 bg-slate-900/40 p-4 text-sm">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <button
-                        type="button"
-                        disabled={authSession.loading || authSession.completing || authSession.status === "used"}
-                        onClick={async () => {
-                          if (authSession.status === "issued") {
-                            const result = await authSession.completeUse();
-                            if (result.ok) {
-                              const current = getUsageSummary(selectedItem.rawAsset);
-                              setUsageOverrides((prev) => ({
-                                ...prev,
-                                [selectedItem.id]: {
-                                  usedCount: result.usageCount,
-                                  maxUsage: current.maxUsage,
-                                },
-                              }));
-                              await refetch();
-                            }
-                            return;
+            {!loading && !nftError && showDetail && selectedItem && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    authSession.reset();
+                    setSelectedId("");
+                  }}
+                  className="mb-5 rounded-lg border border-slate-600 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:border-slate-400 hover:text-white"
+                >
+                  목록으로 돌아가기
+                </button>
+                <div className="mb-5 rounded-xl border border-slate-700 bg-slate-900/40 p-4 text-sm">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      disabled={authSession.loading || authSession.completing || authSession.status === "used"}
+                      onClick={async () => {
+                        if (authSession.status === "issued") {
+                          const result = await authSession.completeUse();
+                          if (result && result.ok) {
+                            const current = getUsageSummary(selectedItem.rawAsset);
+                            setUsageOverrides((prev) => ({
+                              ...prev,
+                              [selectedItem.id]: {
+                                usedCount: result.usageCount,
+                                maxUsage: current.maxUsage,
+                              },
+                            }));
+                            await refetch();
                           }
-                          await authSession.startAuth(walletAddress, selectedItem);
-                        }}
-                        className="rounded-lg border border-cyan-400/50 bg-cyan-500/10 px-4 py-2 text-xs font-semibold text-cyan-200 transition hover:bg-cyan-500/20 disabled:opacity-60"
-                      >
-                        {authSession.loading
-                          ? "인증코드 발급 중..."
-                          : authSession.completing
-                            ? "사용 처리 중..."
-                            : authSession.status === "issued"
+                          return;
+                        }
+                        await authSession.startAuth(walletAddress, selectedItem);
+                      }}
+                      className="rounded-lg border border-cyan-400/50 bg-cyan-500/10 px-4 py-2 text-xs font-semibold text-cyan-200 transition hover:bg-cyan-500/20 disabled:opacity-60"
+                    >
+                      {authSession.loading
+                        ? "인증코드 발급 중..."
+                        : authSession.completing
+                          ? "사용 처리 중..."
+                          : authSession.status === "issued"
+                            ? "사용완료"
+                            : authSession.status === "used"
                               ? "사용완료"
-                              : authSession.status === "used"
-                                ? "사용완료"
-                                : authSession.status === "expired"
-                                  ? "다시 인증하기"
-                                  : "인증하기"}
-                      </button>
-                      <span className="text-slate-300">
-                        상태:{" "}
-                        <span
-                          className={
-                            authSession.status === "used"
-                              ? "text-emerald-300"
                               : authSession.status === "expired"
-                                ? "text-rose-300"
-                                : "text-amber-300"
-                          }
-                        >
-                          {authSession.statusLabel}
-                        </span>
+                                ? "다시 인증하기"
+                                : "인증하기"}
+                    </button>
+                    <span className="text-slate-300">
+                      상태:{" "}
+                      <span
+                        className={
+                          authSession.status === "used"
+                            ? "text-emerald-300"
+                            : authSession.status === "expired"
+                              ? "text-rose-300"
+                              : "text-amber-300"
+                        }
+                      >
+                        {authSession.statusLabel}
                       </span>
-                      {authSession.status === "issued" && (
-                        <span className="text-slate-300">
-                          만료까지 <span className="font-mono text-white">{Math.floor(authSession.remainingSeconds / 60).toString().padStart(2, "0")}:{(authSession.remainingSeconds % 60).toString().padStart(2, "0")}</span>
-                        </span>
-                      )}
-                    </div>
-                    {authSession.authCode && (
-                      <p className="mt-2 font-mono text-cyan-300">인증코드: {authSession.authCode}</p>
+                    </span>
+                    {authSession.status === "issued" && (
+                      <span className="text-slate-300">
+                        만료까지 <span className="font-mono text-white">{Math.floor(authSession.remainingSeconds / 60).toString().padStart(2, "0")}:{(authSession.remainingSeconds % 60).toString().padStart(2, "0")}</span>
+                      </span>
                     )}
-                    {authSession.error && <p className="mt-2 text-rose-300">{authSession.error}</p>}
                   </div>
-                  <NFTCardAnimated
-                    key={selectedItem.id}
-                    item={selectedItem}
-                    authCode={authSession.authCode}
-                    sessionStatus={authSession.status}
-                    remainingSeconds={authSession.remainingSeconds}
-                  />
-                  <div className="mx-auto mt-4 w-full max-w-[390px] rounded-lg border border-white/10 bg-slate-900/50 px-4 py-3 text-center">
-                    {(() => {
-                      const usage = getUsageSummary(selectedItem.rawAsset);
-                      return (
-                        <p className={`text-sm font-semibold ${usage.isCompleted ? "text-rose-300" : "text-emerald-300"}`}>
-                          현재 사용 가능 횟수: {usage.remaining}회
-                        </p>
-                      );
-                    })()}
-                  </div>
+                  {authSession.authCode && (
+                    <p className="mt-2 font-mono text-cyan-300">인증코드: {authSession.authCode}</p>
+                  )}
+                  {authSession.error && <p className="mt-2 text-rose-300">{authSession.error}</p>}
                 </div>
-              )}
-            </div>
-          )}
+                <NFTCardAnimated
+                  key={selectedItem.id}
+                  item={selectedItem}
+                  authCode={authSession.authCode}
+                  sessionStatus={authSession.status}
+                  remainingSeconds={authSession.remainingSeconds}
+                />
+                <div className="mx-auto mt-4 w-full max-w-[390px] rounded-lg border border-white/10 bg-slate-900/50 px-4 py-3 text-center">
+                  {(() => {
+                    const usage = getUsageSummary(selectedItem.rawAsset);
+                    return (
+                      <p className={`text-sm font-semibold ${usage.isCompleted ? "text-rose-300" : "text-emerald-300"}`}>
+                        현재 사용 가능 횟수: {usage.remaining}회
+                      </p>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+          </div>
         </section>
 
         {/* 4) 멤버십 사용방법 */}

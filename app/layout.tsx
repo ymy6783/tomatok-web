@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AppProviders } from "@/components/providers/AppProviders";
 import "pretendard/dist/web/static/pretendard.css";
 import "./globals.css";
 
@@ -14,7 +15,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" className="h-full antialiased">
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+      <body className="min-h-full flex flex-col font-sans">
+        <AppProviders>{children}</AppProviders>
+      </body>
     </html>
   );
 }
