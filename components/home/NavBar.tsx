@@ -8,7 +8,6 @@ import { ConnectPhantomButton } from "@/components/membership/ConnectPhantomButt
 import { usePhantomWallet } from "@/hooks/usePhantomWallet";
 
 const navItems = [
-  { label: "HOME", href: "#hero" },
   { label: "WHITE PAPER", href: "/whitepaper", hasChevron: true },
   { label: "MEMBERSHIP", href: "/membership" },
   { label: "NOTICE", href: "/notice" },

@@ -2,7 +2,6 @@
 
 import type { MembershipCardAsset } from "@/lib/membership/filterMembershipNfts";
 import { MEMBERSHIP_THEME_CLASSES } from "@/lib/membership/getLevelStyle";
-import { getUsageSummary } from "@/lib/membership/getUsageSummary";
 
 type Props = {
   item: MembershipCardAsset;
@@ -12,7 +11,6 @@ type Props = {
 
 export function NFTCardStatic({ item, selected, onSelect }: Props) {
   const theme = MEMBERSHIP_THEME_CLASSES[item.theme];
-  const usage = getUsageSummary(item.rawAsset);
 
   return (
     <button
@@ -38,9 +36,9 @@ export function NFTCardStatic({ item, selected, onSelect }: Props) {
       <div className="mt-2 flex items-center justify-between">
         <span className="text-xs text-slate-400">{item.theme}</span>
         <div className="flex items-center gap-2">
-          {usage.isCompleted && (
-            <span className="rounded-md border border-rose-400/50 bg-rose-500/10 px-2 py-0.5 text-[11px] font-semibold text-rose-200">
-              사용 완료
+          {selected && (
+            <span className="rounded-md border border-cyan-400/40 bg-cyan-500/10 px-2 py-0.5 text-[11px] font-semibold text-cyan-200">
+              선택됨
             </span>
           )}
           <span className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold ${theme.badge} ${theme.badgeText}`}>
@@ -49,12 +47,8 @@ export function NFTCardStatic({ item, selected, onSelect }: Props) {
         </div>
       </div>
       <div className="mt-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
-        <p className="text-xs text-white/70">
-          사용 {usage.usedCount} / {usage.maxUsage}
-        </p>
-        <p className={`mt-1 text-xs ${usage.isCompleted ? "text-rose-300" : "text-emerald-300"}`}>
-          {usage.isCompleted ? "사용 완료" : `잔여 ${usage.remaining}회`}
-        </p>
+        <p className="text-xs text-white/70">Mint</p>
+        <p className="mt-1 truncate font-mono text-xs text-cyan-300">{item.mint}</p>
       </div>
     </button>
   );

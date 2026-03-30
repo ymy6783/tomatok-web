@@ -2,13 +2,9 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { MembershipCardAsset } from "@/lib/membership/filterMembershipNfts";
-import { getUsageSummary } from "@/lib/membership/getUsageSummary";
 
 type Props = {
   item: MembershipCardAsset;
-  authCode: string;
-  sessionStatus: "idle" | "issued" | "used" | "expired";
-  remainingSeconds: number;
 };
 
 type Tone = {
@@ -24,17 +20,6 @@ function truncateMiddle(value: string, left = 6, right = 4) {
   if (!value) return "-";
   if (value.length <= left + right + 3) return value;
   return `${value.slice(0, left)}...${value.slice(-right)}`;
-}
-
-function formatRemain(seconds: number) {
-  const safe = Math.max(0, seconds);
-  const m = Math.floor(safe / 60)
-    .toString()
-    .padStart(2, "0");
-  const s = Math.floor(safe % 60)
-    .toString()
-    .padStart(2, "0");
-  return `${m}:${s}`;
 }
 
 function getTone(theme: MembershipCardAsset["theme"]): Tone {
@@ -84,17 +69,9 @@ function ArtworkFrame({ image, title }: { image: string; title: string }) {
 
 function InfoSection({
   item,
-  usedCount,
-  maxUsage,
-  remaining,
-  isCompleted,
   levelTextClass,
 }: {
   item: MembershipCardAsset;
-  usedCount: number;
-  maxUsage: number;
-  remaining: number;
-  isCompleted: boolean;
   levelTextClass: string;
 }) {
   return (
@@ -108,56 +85,14 @@ function InfoSection({
       <p className="mt-1 truncate text-xs text-slate-300">{item.seriesName}</p>
       <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
         <div className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-2">
-          <p className="text-white/55">사용</p>
-          <p className="mt-1 font-mono text-white">
-            {usedCount} / {maxUsage}
-          </p>
+          <p className="text-white/55">Theme</p>
+          <p className="mt-1 font-semibold uppercase text-white">{item.theme}</p>
         </div>
         <div className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-2">
-          <p className="text-white/55">잔여</p>
-          <p className={`mt-1 font-semibold ${isCompleted ? "text-rose-300" : "text-emerald-300"}`}>
-            {isCompleted ? "사용 완료" : `${remaining}회`}
-          </p>
+          <p className="text-white/55">Mint</p>
+          <p className="mt-1 font-mono text-cyan-300">{truncateMiddle(item.mint, 8, 6)}</p>
         </div>
       </div>
-    </div>
-  );
-}
-
-function AuthPanel({
-  sessionStatus,
-  remainingSeconds,
-  authCode,
-}: {
-  sessionStatus: Props["sessionStatus"];
-  remainingSeconds: number;
-  authCode: string;
-}) {
-  return (
-    <div className="mt-3 rounded-xl border border-white/15 bg-black/45 px-3 py-2.5">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Auth Status</p>
-        <p
-          className={`text-xs font-semibold ${
-            sessionStatus === "used"
-              ? "text-emerald-300"
-              : sessionStatus === "expired"
-                ? "text-rose-300"
-                : "text-amber-300"
-          }`}
-        >
-          {sessionStatus === "used"
-            ? "VERIFIED"
-            : sessionStatus === "expired"
-              ? "EXPIRED"
-              : "PENDING"}
-        </p>
-      </div>
-      <div className="mt-1 flex items-center justify-between gap-2 text-xs text-slate-200">
-        <span>인증 만료 시간</span>
-        <span className="font-mono">{formatRemain(remainingSeconds)}</span>
-      </div>
-      {!!authCode && <p className="mt-1 text-[11px] font-mono text-cyan-300">CODE {authCode}</p>}
     </div>
   );
 }
@@ -186,7 +121,7 @@ function CardFrame({
   );
 }
 
-export function NFTCardAnimated({ item, authCode, sessionStatus, remainingSeconds }: Props) {
+export function NFTCardAnimated({ item }: Props) {
   const [flipped, setFlipped] = useState(false);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const ref = useRef<HTMLDivElement>(null);
@@ -198,8 +133,6 @@ export function NFTCardAnimated({ item, authCode, sessionStatus, remainingSecond
     const mint = typeof raw?.mint === "string" ? raw.mint : "";
     return id || mint || item.id;
   }, [item]);
-
-  const usage = useMemo(() => getUsageSummary(item.rawAsset), [item.rawAsset]);
 
   const onMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const el = ref.current;
@@ -245,17 +178,12 @@ export function NFTCardAnimated({ item, authCode, sessionStatus, remainingSecond
                     </div>
                     <InfoSection
                       item={item}
-                      usedCount={usage.usedCount}
-                      maxUsage={usage.maxUsage}
-                      remaining={usage.remaining}
-                      isCompleted={usage.isCompleted}
                       levelTextClass={tone.levelText}
                     />
-                    <AuthPanel
-                      sessionStatus={sessionStatus}
-                      remainingSeconds={remainingSeconds}
-                      authCode={authCode}
-                    />
+                    <div className="mt-3 rounded-xl border border-white/15 bg-black/45 px-3 py-2.5">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Card Interaction</p>
+                      <p className="mt-1 text-xs text-slate-200">카드를 클릭하면 앞면과 뒷면 상세 정보를 전환할 수 있습니다.</p>
+                    </div>
                   </div>
                 </CardFrame>
               </div>
@@ -287,24 +215,15 @@ export function NFTCardAnimated({ item, authCode, sessionStatus, remainingSecond
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div className="rounded-lg border border-white/15 bg-black/35 p-3">
-                          <p className="text-[11px] text-white/55">사용</p>
-                          <p className="mt-1 font-mono text-white">
-                            {usage.usedCount} / {usage.maxUsage}
-                          </p>
+                          <p className="text-[11px] text-white/55">Theme</p>
+                          <p className="mt-1 font-semibold uppercase text-white">{item.theme}</p>
                         </div>
                         <div className="rounded-lg border border-white/15 bg-black/35 p-3">
-                          <p className="text-[11px] text-white/55">잔여</p>
-                          <p className={`mt-1 font-semibold ${usage.isCompleted ? "text-rose-300" : "text-emerald-300"}`}>
-                            {usage.isCompleted ? "사용 완료" : `${usage.remaining}회`}
-                          </p>
+                          <p className="text-[11px] text-white/55">Token ID</p>
+                          <p className="mt-1 font-mono text-cyan-300">{truncateMiddle(item.id, 10, 8)}</p>
                         </div>
                       </div>
                     </div>
-                    <AuthPanel
-                      sessionStatus={sessionStatus}
-                      remainingSeconds={remainingSeconds}
-                      authCode={authCode}
-                    />
                     <p className="mt-2 text-xs text-white/45">카드를 클릭하면 앞면/뒷면이 전환됩니다.</p>
                   </div>
                 </CardFrame>
