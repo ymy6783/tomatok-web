@@ -13,7 +13,6 @@ export default async function NoticeDetailPage({ params }: Props) {
   const notice = await fetchNoticeById(id);
 
   if (!notice) notFound();
-  const displayDate = new Date(notice.updatedAt || notice.createdAt).toLocaleDateString("ko-KR");
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -27,7 +26,6 @@ export default async function NoticeDetailPage({ params }: Props) {
             </span>
             <h1 className="text-2xl font-bold text-white sm:text-3xl">{notice.title}</h1>
           </div>
-          <p className="shrink-0 text-sm text-slate-500">{displayDate}</p>
         </div>
 
         <div className="mb-10 border-t border-slate-700" aria-hidden />

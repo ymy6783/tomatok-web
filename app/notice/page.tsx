@@ -1,18 +1,12 @@
 import Link from "next/link";
 import { NavBar } from "@/components/home/NavBar";
 import { SiteFooter } from "@/components/home/SiteFooter";
-import { NOTICE_CATEGORIES, fetchNoticePage, type NoticeItem } from "@/lib/notices";
+import { NOTICE_CATEGORIES, fetchNoticePage } from "@/lib/notices";
 
 type SearchParams = { page?: string; category?: string };
 
 function stripHtml(value: string) {
   return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-}
-
-function formatDisplayDate(notice: NoticeItem) {
-  const source = notice.updatedAt || notice.createdAt;
-  if (!source) return "-";
-  return new Date(source).toLocaleDateString("ko-KR");
 }
 
 export default async function NoticePage({
@@ -85,15 +79,12 @@ export default async function NoticePage({
                         {notice.category}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="truncate font-semibold text-white">
+                        <span className="block min-w-0 truncate font-semibold text-white">
                           {notice.title}
                         </span>
                         <span className="mt-1 block truncate text-sm text-slate-500">
                           {stripHtml(notice.bodyHtml) || "본문이 없습니다."}
                         </span>
-                      </span>
-                      <span className="w-24 shrink-0 text-right text-sm text-slate-500">
-                        {formatDisplayDate(notice)}
                       </span>
                     </Link>
                   </li>
