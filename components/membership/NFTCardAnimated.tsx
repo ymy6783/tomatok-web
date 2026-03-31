@@ -5,6 +5,7 @@ import type { MembershipCardAsset } from "@/lib/membership/filterMembershipNfts"
 
 type Props = {
   item: MembershipCardAsset;
+  registered?: boolean;
 };
 
 type Tone = {
@@ -121,7 +122,7 @@ function CardFrame({
   );
 }
 
-export function NFTCardAnimated({ item }: Props) {
+export function NFTCardAnimated({ item, registered = false }: Props) {
   const [flipped, setFlipped] = useState(false);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const ref = useRef<HTMLDivElement>(null);
@@ -169,9 +170,16 @@ export function NFTCardAnimated({ item }: Props) {
                   <div className="relative h-[520px] w-full">
                     <div className="flex items-start justify-between gap-3">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/75">TOMAKONGZ</p>
-                      <span className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold ${tone.chip} ${tone.levelText}`}>
-                        {item.label}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {registered ? (
+                          <span className="rounded-md border border-emerald-300/35 bg-emerald-400/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-200">
+                            등록완료
+                          </span>
+                        ) : null}
+                        <span className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold ${tone.chip} ${tone.levelText}`}>
+                          {item.label}
+                        </span>
+                      </div>
                     </div>
                     <div className="mt-2">
                       <ArtworkFrame image={item.image} title={item.title} />

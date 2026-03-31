@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { NavBar } from "@/components/home/NavBar";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { NftCardList } from "@/components/membership/NftCardList";
 import { NFTCardAnimated } from "@/components/membership/NFTCardAnimated";
 import { useMembershipNfts } from "@/hooks/useMembershipNfts";
+import { useRegisteredMembershipMints } from "@/hooks/useRegisteredMembershipMints";
 import { usePhantomWallet } from "@/hooks/usePhantomWallet";
 
 const BASE_BENEFITS = [
@@ -39,13 +40,22 @@ const TIERS = [
 export default function MembershipPage() {
   const { mounted, walletAddress, isPhantomInstalled } = usePhantomWallet();
   const { items, loading, error: nftError, refetch } = useMembershipNfts(walletAddress);
+  const {
+    registeredMints,
+    loading: registeredLoading,
+    error: registeredError,
+    refetch: refetchRegisteredMints,
+    markRegistered,
+  } = useRegisteredMembershipMints(walletAddress);
   const [selectedId, setSelectedId] = useState<string>("");
   const [saveLoading, setSaveLoading] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState("");
+  const registeredMintSet = useMemo(() => new Set(registeredMints), [registeredMints]);
 
   const selectedItem = items.find((item) => item.id === selectedId) ?? null;
   const showDetail = !!selectedItem;
+  const selectedItemRegistered = selectedItem ? registeredMintSet.has(selectedItem.mint) : false;
 
   if (!walletAddress) {
     return (
@@ -192,7 +202,10 @@ export default function MembershipPage() {
             {walletAddress && (
               <button
                 type="button"
-                onClick={refetch}
+                onClick={() => {
+                  void refetch();
+                  void refetchRegisteredMints();
+                }}
                 disabled={loading}
                 className="rounded-lg border border-slate-600 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:border-slate-400 hover:text-white disabled:opacity-60"
               >
@@ -205,6 +218,18 @@ export default function MembershipPage() {
             <div className="mb-5 rounded-lg border border-slate-700 bg-slate-900/50 px-4 py-3 text-xs text-slate-400">
               연결 지갑: <span className="font-mono text-slate-200">{walletAddress}</span>
             </div>
+
+            {!loading && !nftError && registeredLoading && (
+              <div className="mb-5 rounded-lg border border-slate-700 bg-slate-900/40 px-4 py-3 text-xs text-slate-400">
+                등록된 NFT 목록을 확인 중입니다...
+              </div>
+            )}
+
+            {!loading && !nftError && registeredError && (
+              <div className="mb-5 rounded-lg border border-amber-900/50 bg-amber-950/20 px-4 py-3 text-xs text-amber-200">
+                등록 NFT 조회에 실패했습니다. 목록은 계속 확인할 수 있으며, 필요하면 다시 조회해 주세요.
+              </div>
+            )}
 
             {loading && (
               <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-8 text-center text-slate-400">
@@ -229,6 +254,7 @@ export default function MembershipPage() {
                 <p className="mb-4 text-sm text-slate-400">카드를 선택하면 상세 정보를 확인하고 보관 요청을 보낼 수 있습니다.</p>
                 <NftCardList
                   items={items}
+                  registeredMints={registeredMintSet}
                   selectedId={selectedId}
                   onSelect={(id) => {
                     setSaveError("");
@@ -256,7 +282,7 @@ export default function MembershipPage() {
                   <div className="flex flex-wrap items-center gap-3">
                     <button
                       type="button"
-                      disabled={saveLoading}
+                      disabled={saveLoading || selectedItemRegistered}
                       onClick={async () => {
                         if (!selectedItem) return;
 
@@ -285,24 +311,33 @@ export default function MembershipPage() {
                           }
 
                           setSaveSuccess(data.msg ?? "NFT 보관 요청이 완료되었습니다.");
+                          markRegistered(selectedItem.mint);
+                          void refetchRegisteredMints();
                         } catch (error) {
                           setSaveError(error instanceof Error ? error.message : "NFT 보관 요청 중 오류가 발생했습니다.");
                         } finally {
                           setSaveLoading(false);
                         }
                       }}
-                      className="rounded-lg border border-violet-400/50 bg-violet-500/10 px-4 py-2 text-xs font-semibold text-violet-200 transition hover:bg-violet-500/20 disabled:opacity-60"
+                      className={`rounded-lg px-4 py-2 text-xs font-semibold transition disabled:opacity-60 ${
+                        selectedItemRegistered
+                          ? "border border-emerald-400/40 bg-emerald-500/10 text-emerald-200"
+                          : "border border-violet-400/50 bg-violet-500/10 text-violet-200 hover:bg-violet-500/20"
+                      }`}
                     >
-                      {saveLoading ? "보관 요청 중..." : "NFT 보관"}
+                      {selectedItemRegistered ? "등록완료" : saveLoading ? "보관 요청 중..." : "NFT 보관"}
                     </button>
                     <span className="text-slate-300">
                       선택 NFT Mint: <span className="font-mono text-white">{selectedItem.mint}</span>
                     </span>
                   </div>
+                  {selectedItemRegistered && (
+                    <p className="mt-2 text-emerald-300">이 NFT는 이미 등록되어 있습니다.</p>
+                  )}
                   {saveSuccess && <p className="mt-2 text-violet-300">{saveSuccess}</p>}
                   {saveError && <p className="mt-2 text-rose-300">{saveError}</p>}
                 </div>
-                <NFTCardAnimated key={selectedItem.id} item={selectedItem} />
+                <NFTCardAnimated key={selectedItem.id} item={selectedItem} registered={selectedItemRegistered} />
               </div>
             )}
           </div>
