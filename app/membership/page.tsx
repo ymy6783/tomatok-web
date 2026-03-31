@@ -3,13 +3,12 @@
 import { useMemo, useState } from "react";
 import { NavBar } from "@/components/home/NavBar";
 import { SiteFooter } from "@/components/home/SiteFooter";
-import { ConnectPhantomButton } from "@/components/membership/ConnectPhantomButton";
-import { NFTCardGrid } from "@/components/membership/NFTCardGrid";
-import { NFTDetailModal } from "@/components/membership/NFTDetailModal";
-import { getUsageSummary } from "@/lib/membership/getUsageSummary";
-import { useMembershipAuthSession } from "@/hooks/useMembershipAuthSession";
+import { NftCardList } from "@/components/membership/NftCardList";
+import { NFTCardAnimated } from "@/components/membership/NFTCardAnimated";
 import { useMembershipNfts } from "@/hooks/useMembershipNfts";
+import { useRegisteredMembershipMints } from "@/hooks/useRegisteredMembershipMints";
 import { usePhantomWallet } from "@/hooks/usePhantomWallet";
+import type { MembershipCardAsset } from "@/lib/membership/filterMembershipNfts";
 
 const BASE_BENEFITS = [
   "클램핑장 현장 예약 할인",
@@ -18,129 +17,193 @@ const BASE_BENEFITS = [
   "기타 입장료 현장 할인",
 ] as const;
 
-/** 상단 3열 티어 카드 — 배경은 이미지, 텍스트 오버레이 */
-const TIER_CARDS = [
+const TIERS = [
   {
-    name: "BASIC",
-    bg: "/images/nft_card_basic.png",
-    benefits: [
-      "관광 / 체험 시설 할인",
-      "호텔 및 숙박 예약 할인",
-      "글램핑 및 레저 시설 할인",
-      "제휴 F&B 매장 할인",
-      "연간 사용 한도: 00회",
-    ],
+    name: "RED",
+    tagline: "기본 멤버십 혜택 제공",
+    desc: "토마톡 생태계의 시작 단계",
+    highlight: false,
   },
   {
     name: "SILVER",
-    bg: "/images/nft_card_silver.png",
-    benefits: [
-      "BASIC 혜택 포함",
-      "할인율 상향 적용",
-      "일부 제휴처 전용 혜택 제공",
-      "연간 사용 한도: 00회",
-    ],
+    tagline: "핵심 멤버십 등급",
+    desc: "프리미엄 혜택과 우선권 제공",
+    highlight: false,
   },
   {
     name: "GOLD",
-    bg: "/images/nft_card_gold.png",
-    benefits: [
-      "ALL BENEFITS INCLUDED",
-      "프리미엄 할인율 적용",
-      "인기 제휴처 우선 이용",
-      "전용 혜택 제공",
-      "연간 사용 한도: 00회",
-    ],
+    tagline: "최상위 멤버십",
+    desc: "토마톡 핵심 참여자",
+    highlight: true,
   },
 ] as const;
 
 export default function MembershipPage() {
-  const { mounted, walletAddress, isPhantomInstalled, connecting, error: walletError, connect } =
-    usePhantomWallet();
+  const { mounted, walletAddress, isPhantomInstalled } = usePhantomWallet();
   const { items, loading, error: nftError, refetch } = useMembershipNfts(walletAddress);
-  const authSession = useMembershipAuthSession();
+  const {
+    registeredMints,
+    loading: registeredLoading,
+    error: registeredError,
+    refetch: refetchRegisteredMints,
+    markRegistered,
+  } = useRegisteredMembershipMints(walletAddress);
   const [selectedId, setSelectedId] = useState<string>("");
-  const [authStarted, setAuthStarted] = useState(false);
-  const [usageOverrides, setUsageOverrides] = useState<Record<string, { usedCount: number; maxUsage: number }>>({});
+  const [savingMint, setSavingMint] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [saveSuccess, setSaveSuccess] = useState("");
+  const registeredMintSet = useMemo(() => new Set(registeredMints), [registeredMints]);
 
-  const displayItems = useMemo(() => {
-    return items.map((item) => {
-      const override = usageOverrides[item.id];
-      if (!override) return item;
-      const raw = item.rawAsset && typeof item.rawAsset === "object" ? (item.rawAsset as Record<string, unknown>) : {};
-      return {
-        ...item,
-        rawAsset: {
-          ...raw,
-          usage_count: override.usedCount,
-          usage_limit: override.maxUsage,
-        },
-      };
-    });
-  }, [items, usageOverrides]);
-
-  const selectedItem = displayItems.find((item) => item.id === selectedId) ?? null;
+  const selectedItem = items.find((item) => item.id === selectedId) ?? null;
   const showDetail = !!selectedItem;
+  const selectedItemRegistered = selectedItem ? registeredMintSet.has(selectedItem.mint) : false;
+  const saveLoading = !!savingMint;
+  const selectedItemSaving = !!selectedItem && savingMint === selectedItem.mint;
 
-  const handleStartAuth = async () => {
-    setAuthStarted(true);
-    await connect();
-  };
+  async function handleSaveItem(item: MembershipCardAsset) {
+    if (!walletAddress || registeredMintSet.has(item.mint) || saveLoading) return;
+
+    setSavingMint(item.mint);
+    setSaveError("");
+    setSaveSuccess("");
+
+    try {
+      const response = await fetch("/api/membership/cards/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nft_mint: item.mint,
+          wallet_address: walletAddress,
+        }),
+      });
+
+      const data = (await response.json()) as {
+        code?: string;
+        data?: unknown;
+        msg?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(data.msg ?? "NFT 등록 요청에 실패했습니다.");
+      }
+
+      setSaveSuccess(data.msg ?? "NFT 등록 요청이 완료되었습니다.");
+      markRegistered(item.mint);
+      void refetchRegisteredMints();
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "NFT 등록 요청 중 오류가 발생했습니다.");
+    } finally {
+      setSavingMint("");
+    }
+  }
+
+  if (!walletAddress) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100">
+        <NavBar />
+
+        <main className="mx-auto flex w-full max-w-6xl flex-1 items-center px-4 py-20 sm:px-6 sm:py-28">
+          <section className="w-full rounded-3xl border border-slate-800 bg-black/40 p-8 sm:p-12">
+            <div className="max-w-3xl">
+              <p className="mb-4 text-sm font-semibold uppercase tracking-[0.22em] text-cyan-300">
+                Membership Access
+              </p>
+              <h1 className="text-3xl font-bold leading-tight text-white sm:text-5xl">
+                팬텀 지갑 연결 후에만
+                <br />
+                멤버십 페이지를 확인할 수 있습니다
+              </h1>
+              <p className="mt-6 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
+                상단바의 팬텀 버튼으로 지갑을 연결하면 멤버십 NFT 조회와 등록 기능을 사용할 수 있습니다.
+              </p>
+
+              {mounted && !isPhantomInstalled && (
+                <p className="mt-6 rounded-2xl border border-amber-900/40 bg-amber-950/20 px-5 py-4 text-sm text-amber-200">
+                  Phantom 지갑이 감지되지 않았습니다. 상단바 버튼을 눌러 Phantom을 설치한 뒤 다시 접속해 주세요.
+                </p>
+              )}
+            </div>
+          </section>
+        </main>
+
+        <SiteFooter />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <NavBar />
 
       <main className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
-        {/* 1) 카드 섹션 위 — 멤버십 인증 히어로 */}
-        <section className="mb-20 rounded-2xl bg-[#0a0a0c] px-5 py-10 sm:mb-24 sm:px-8 sm:py-12 lg:mb-28">
-          <div className="flex max-w-3xl flex-col items-start">
-            <span className="rounded-lg bg-gray-200 px-3 py-1.5 text-sm font-bold text-black">
-              멤버십 인증
-            </span>
-            <h1 className="mt-6 text-4xl font-bold leading-tight tracking-tight text-white sm:mt-8 sm:text-5xl">
-              NFT Membership
-            </h1>
-            <div className="mt-4 space-y-1 text-lg font-medium leading-relaxed text-white sm:text-xl">
-              <p>NFT 기반 TOTT 멤버십을 실시간 인증으로 안전하게!</p>
-              <p>다양한 제휴처에서 혜택 받아보세요.</p>
+        {/* 1) 상단 1행 2열 */}
+        <section className="mb-24 grid gap-12 lg:mb-32 lg:grid-cols-2 lg:gap-16 lg:items-start">
+          <div className="flex flex-col justify-between gap-10">
+            <div>
+              <h1 className="text-4xl font-bold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
+                NFT Membership
+                <br />
+                <span className="mt-2 block text-3xl sm:text-4xl lg:text-5xl">
+                  토마톡 생태계의 핵심 멤버가 되세요
+                </span>
+              </h1>
             </div>
-            <p className="mt-8 max-w-2xl text-xs leading-relaxed text-white/75 sm:mt-10 sm:text-sm">
-              *제휴처는 계약 조건에 따라 변경될 수 있으며, 멤버십 혜택은 지속적으로 확장될 예정입니다.
+            <p className="max-w-md text-lg leading-relaxed text-white sm:text-xl">
+              NFT 보유자에게만 제공되는
+              <br />
+              프리미엄 혜택과 참여 권한
+            </p>
+          </div>
+          <div className="lg:flex lg:justify-end lg:pt-2">
+            <p className="max-w-xs text-sm leading-relaxed text-slate-500 lg:text-right">
+              레벨별 기본 서비스는 동일하게 적용됩니다.
             </p>
           </div>
         </section>
 
-        {/* 2) 3개 카드 — 레벨별 배경 이미지 + 텍스트 오버레이 */}
+        {/* 2) 3개 카드 */}
         <section className="mb-28 lg:mb-36">
-          <div className="grid gap-6 sm:gap-8 md:grid-cols-3 md:items-stretch">
-            {TIER_CARDS.map((tier) => (
+          <div className="grid gap-8 md:grid-cols-3 md:items-stretch">
+            {TIERS.map((tier) => (
               <article
                 key={tier.name}
-                className="relative aspect-[4/5] w-full max-w-md mx-auto overflow-hidden rounded-2xl sm:rounded-3xl shadow-lg shadow-black/40 md:max-w-none"
+                className={`relative flex flex-col rounded-2xl border p-8 sm:p-10 ${
+                  tier.highlight
+                    ? "border-amber-400/50 bg-gradient-to-b from-amber-950/35 to-slate-900/80 shadow-[0_0_60px_-12px_rgba(251,191,36,0.28)] md:z-10 md:scale-[1.02] md:py-12"
+                    : "border-slate-800/80 bg-slate-900/40"
+                }`}
               >
-                {/* public 정적 파일은 <img>로 직접 로드 (이미지 최적화 파이프라인 이슈 방지) */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={tier.bg}
-                  alt=""
-                  className="absolute inset-0 z-0 h-full w-full object-cover object-center"
-                  loading={tier.name === "BASIC" ? "eager" : "lazy"}
-                  decoding="async"
-                />
-                <div
-                  className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-black/45"
-                  aria-hidden
-                />
-                <div className="relative z-10 flex h-full flex-col px-5 pb-6 pt-8 text-white sm:px-6 sm:pb-8 sm:pt-10">
-                  <h2 className="text-center text-2xl font-bold uppercase tracking-[0.2em] text-white drop-shadow sm:text-3xl">
-                    {tier.name}
-                  </h2>
-                  <ul className="mt-6 flex flex-1 flex-col justify-center space-y-3 pl-1 text-left text-sm leading-snug text-white/95 drop-shadow [text-shadow:0_1px_2px_rgba(0,0,0,0.55)] sm:mt-8 sm:space-y-3.5 sm:text-[15px]">
-                    {tier.benefits.map((line) => (
-                      <li key={line} className="flex gap-2.5">
-                        <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-white/90" />
-                        <span>{line}</span>
+                {tier.highlight && (
+                  <span className="absolute right-6 top-6 rounded-full bg-amber-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-amber-200">
+                    Featured
+                  </span>
+                )}
+                <h2
+                  className={`text-2xl font-bold tracking-widest sm:text-3xl ${
+                    tier.highlight ? "text-amber-100" : "text-slate-200"
+                  }`}
+                >
+                  {tier.name}
+                </h2>
+                <p className="mt-4 text-base font-medium text-white">{tier.tagline}</p>
+                <p className="mt-2 text-sm text-slate-400">{tier.desc}</p>
+                <div className="mt-8 flex-1 border-t border-white/10 pt-8">
+                  <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    기본 혜택
+                  </p>
+                  <ul className="space-y-3 text-sm text-slate-300">
+                    {BASE_BENEFITS.map((b) => (
+                      <li key={b} className="flex gap-3">
+                        <span
+                          className={`mt-1.5 h-1 w-1 shrink-0 rounded-full ${
+                            tier.name === "RED"
+                              ? "bg-red-500/90"
+                              : tier.name === "SILVER"
+                                ? "bg-slate-300/90"
+                                : "bg-amber-400/90"
+                          }`}
+                        />
+                        <span>{b}</span>
                       </li>
                     ))}
                   </ul>
@@ -171,15 +234,18 @@ export default function MembershipPage() {
         <section className="mb-24 rounded-2xl border border-slate-800 bg-black/30 p-6 sm:p-8 lg:mb-28">
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-white sm:text-3xl">멤버십 인증</h2>
+              <h2 className="text-2xl font-bold text-white sm:text-3xl">보유 NFT 현황</h2>
               <p className="mt-2 text-sm text-slate-400">
-                지갑을 연결하면 보유한 멤버십 NFT를 확인할 수 있습니다
+                지갑을 연결하면 보유한 멤버십 NFT를 확인하고 등록 요청을 보낼 수 있습니다
               </p>
             </div>
             {walletAddress && (
               <button
                 type="button"
-                onClick={refetch}
+                onClick={() => {
+                  void refetch();
+                  void refetchRegisteredMints();
+                }}
                 disabled={loading}
                 className="rounded-lg border border-slate-600 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:border-slate-400 hover:text-white disabled:opacity-60"
               >
@@ -188,109 +254,118 @@ export default function MembershipPage() {
             )}
           </div>
 
-          {!authStarted && (
-            <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-6">
-              <p className="mb-4 text-sm text-slate-400">
-                인증 완료 전에는 NFT 목록이 표시되지 않습니다. 먼저 Phantom 지갑을 연결해 주세요.
-              </p>
-              {mounted && !isPhantomInstalled && (
-                <p className="mb-4 text-sm text-amber-300">
-                  Phantom 지갑이 감지되지 않았습니다. 브라우저에 Phantom 확장 프로그램을 설치해 주세요.
-                </p>
-              )}
-              <ConnectPhantomButton connecting={connecting} onConnect={handleStartAuth} />
-              {walletError && <p className="mt-4 text-sm text-rose-400">{walletError}</p>}
+          <div>
+            <div className="mb-5 rounded-lg border border-slate-700 bg-slate-900/50 px-4 py-3 text-xs text-slate-400">
+              연결 지갑: <span className="font-mono text-slate-200">{walletAddress}</span>
             </div>
-          )}
 
-          {authStarted && !walletAddress && (
-            <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-6">
-              {mounted && !isPhantomInstalled && (
-                <p className="mb-4 text-sm text-amber-300">
-                  Phantom 지갑이 감지되지 않았습니다. 브라우저에 Phantom 확장 프로그램을 설치해 주세요.
-                </p>
-              )}
-              <ConnectPhantomButton connecting={connecting} onConnect={handleStartAuth} />
-              {walletError && <p className="mt-4 text-sm text-rose-400">{walletError}</p>}
-            </div>
-          )}
-
-          {authStarted && walletAddress && (
-            <div>
-              <div className="mb-5 rounded-lg border border-slate-700 bg-slate-900/50 px-4 py-3 text-xs text-slate-400">
-                연결 지갑: <span className="font-mono text-slate-200">{walletAddress}</span>
+            {!loading && !nftError && registeredLoading && (
+              <div className="mb-5 rounded-lg border border-slate-700 bg-slate-900/40 px-4 py-3 text-xs text-slate-400">
+                등록된 NFT 목록을 확인 중입니다...
               </div>
+            )}
 
-              {loading && (
-                <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-8 text-center text-slate-400">
-                  보유하신 NFT를 조회중입니다. TOMAKONGZ와 관련된 자산만 불러옵니다.
-                </div>
-              )}
+            {!loading && !nftError && registeredError && (
+              <div className="mb-5 rounded-lg border border-amber-900/50 bg-amber-950/20 px-4 py-3 text-xs text-amber-200">
+                등록 NFT 조회에 실패했습니다. 목록은 계속 확인할 수 있으며, 필요하면 다시 조회해 주세요.
+              </div>
+            )}
 
-              {!loading && nftError && (
-                <div className="rounded-xl border border-rose-900/60 bg-rose-950/20 p-6 text-sm text-rose-300">
-                  {nftError}
-                </div>
-              )}
+            {loading && (
+              <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-8 text-center text-slate-400">
+                NFT를 조회 중입니다...
+              </div>
+            )}
 
-              {!loading && !nftError && items.length === 0 && (
-                <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-8 text-center text-slate-400">
-                  조건을 만족하는 TOMAKONGZ 멤버십 NFT가 없습니다.
-                </div>
-              )}
+            {!loading && nftError && (
+              <div className="rounded-xl border border-rose-900/60 bg-rose-950/20 p-6 text-sm text-rose-300">
+                {nftError}
+              </div>
+            )}
 
-              {!loading && !nftError && items.length > 0 && !showDetail && (
-                <div>
-                  <p className="mb-4 text-sm text-slate-400">
-                    카드를 선택하면 중앙 모달에서 상세 인증 UI가 열립니다.
-                  </p>
-                  <NFTCardGrid
-                    items={displayItems}
-                    selectedId={selectedId}
-                    onSelect={(id) => {
-                      authSession.reset();
-                      setSelectedId(id);
-                    }}
-                  />
-                </div>
-              )}
+            {!loading && !nftError && items.length === 0 && (
+              <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-8 text-center text-slate-400">
+                조건을 만족하는 TOMAKONGZ 멤버십 NFT가 없습니다.
+              </div>
+            )}
 
-              {selectedItem && (
-                <NFTDetailModal
-                  open={authStarted && !!walletAddress && showDetail}
-                  item={selectedItem}
-                  walletAddress={walletAddress}
-                  sessionStatus={authSession.status}
-                  authCode={authSession.authCode}
-                  remainingSeconds={authSession.remainingSeconds}
-                  loading={authSession.loading}
-                  completing={authSession.completing}
-                  error={authSession.error}
-                  onClose={() => {
-                    authSession.reset();
-                    setSelectedId("");
+            {!loading && !nftError && items.length > 0 && !showDetail && (
+              <div>
+                <p className="mb-4 text-sm text-slate-400">
+                  목록 카드에서 바로 등록 요청을 보내거나, 카드를 선택해 상세 정보를 확인할 수 있습니다.
+                </p>
+                {(saveSuccess || saveError) && (
+                  <div
+                    className={`mb-4 rounded-xl border px-4 py-3 text-sm ${
+                      saveError
+                        ? "border-rose-900/60 bg-rose-950/20 text-rose-300"
+                        : "border-violet-500/30 bg-violet-500/10 text-violet-200"
+                    }`}
+                  >
+                    {saveError || saveSuccess}
+                  </div>
+                )}
+                <NftCardList
+                  items={items}
+                  registeredMints={registeredMintSet}
+                  selectedId={selectedId}
+                  savingMint={savingMint}
+                  onSelect={(id) => {
+                    setSaveError("");
+                    setSaveSuccess("");
+                    setSelectedId(id);
                   }}
-                  onStart={async (addr, item) => {
-                    await authSession.startAuth(addr, item);
-                  }}
-                  onComplete={async () => {
-                    const result = await authSession.completeUse();
-                    if (!result || !("ok" in result) || !result.ok) return false;
-                    const current = getUsageSummary(selectedItem.rawAsset);
-                    setUsageOverrides((prev) => ({
-                      ...prev,
-                      [selectedItem.id]: {
-                        usedCount: result.usageCount,
-                        maxUsage: current.maxUsage,
-                      },
-                    }));
-                    await refetch();
-                    return true;
+                  onSave={(item) => {
+                    void handleSaveItem(item);
                   }}
                 />
-              )}
-            </div>
-          )}
+              </div>
+            )}
+
+            {!loading && !nftError && showDetail && selectedItem && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSaveError("");
+                    setSaveSuccess("");
+                    setSelectedId("");
+                  }}
+                  className="mb-5 rounded-lg border border-slate-600 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:border-slate-400 hover:text-white"
+                >
+                  목록으로 돌아가기
+                </button>
+                <div className="mb-5 rounded-xl border border-slate-700 bg-slate-900/40 p-4 text-sm">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      disabled={saveLoading || selectedItemRegistered}
+                      onClick={() => {
+                        if (!selectedItem) return;
+                        void handleSaveItem(selectedItem);
+                      }}
+                      className={`rounded-lg px-4 py-2 text-xs font-semibold transition disabled:opacity-60 ${
+                        selectedItemRegistered
+                          ? "border border-emerald-400/40 bg-emerald-500/10 text-emerald-200"
+                          : "border border-violet-400/50 bg-violet-500/10 text-violet-200 hover:bg-violet-500/20"
+                      }`}
+                    >
+                      {selectedItemRegistered ? "등록완료" : selectedItemSaving ? "등록 요청 중..." : "NFT 등록"}
+                    </button>
+                    <span className="text-slate-300">
+                      선택 NFT Mint: <span className="font-mono text-white">{selectedItem.mint}</span>
+                    </span>
+                  </div>
+                  {selectedItemRegistered && (
+                    <p className="mt-2 text-emerald-300">이 NFT는 이미 등록되어 있습니다.</p>
+                  )}
+                  {saveSuccess && <p className="mt-2 text-violet-300">{saveSuccess}</p>}
+                  {saveError && <p className="mt-2 text-rose-300">{saveError}</p>}
+                </div>
+                <NFTCardAnimated key={selectedItem.id} item={selectedItem} registered={selectedItemRegistered} />
+              </div>
+            )}
+          </div>
         </section>
 
         {/* 4) 멤버십 사용방법 */}
@@ -315,17 +390,16 @@ export default function MembershipPage() {
           </ol>
         </section>
 
-        {/* 5) 현장 인증 방법 */}
+        {/* 5) NFT 등록 방법 */}
         <section className="mb-24 lg:mb-28">
-          <h2 className="mb-10 text-2xl font-bold text-white sm:text-3xl">현장 인증 방법</h2>
+          <h2 className="mb-10 text-2xl font-bold text-white sm:text-3xl">NFT 등록 방법</h2>
           <ol className="space-y-6">
             {[
-              "멤버십 인증 버튼 클릭",
-              "Phantom 로그인 진행",
-              "보유 NFT 중 TOTT 관련 카드 목록 노출",
-              "카드 1개 선택",
-              "카드가 앞뒤로 회전하며 인증",
-              "캡처 방지 적용",
+              "상단바의 Phantom 버튼으로 지갑 연결",
+              "보유 NFT 중 TOMAKONGZ 관련 카드 목록 조회",
+              "카드 1개 선택 후 상세 정보 확인",
+              "NFT 등록 버튼 클릭",
+              "외부 저장 API로 등록 요청 전달",
             ].map((step, i) => (
               <li
                 key={step}
@@ -346,7 +420,7 @@ export default function MembershipPage() {
           <ul className="space-y-4 text-sm leading-relaxed text-slate-300 sm:text-base">
             <li className="flex gap-3">
               <span className="text-amber-500/90">•</span>
-              NFT는 지갑에 보유되어 있어야 인증 가능
+              NFT는 지갑에 보유되어 있어야 조회 및 등록 요청 가능
             </li>
             <li className="flex gap-3">
               <span className="text-amber-500/90">•</span>
@@ -354,7 +428,7 @@ export default function MembershipPage() {
             </li>
             <li className="flex gap-3">
               <span className="text-amber-500/90">•</span>
-              NFT 판매/전송 시 권한 소멸
+              NFT 판매/전송 시 해당 지갑 기준 조회 결과가 달라질 수 있음
             </li>
             <li className="flex gap-3">
               <span className="text-amber-500/90">•</span>
@@ -362,7 +436,7 @@ export default function MembershipPage() {
             </li>
             <li className="flex gap-3">
               <span className="text-amber-500/90">•</span>
-              부정 사용 시 이용 제한 가능
+              등록 요청 결과는 외부 API 응답 기준으로 처리
             </li>
           </ul>
         </section>

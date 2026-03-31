@@ -22,9 +22,6 @@ export function SiteFooter() {
             <a href="mailto:tomatok01@naver.com" className="hover:text-cyan-400">
               tomatok01@naver.com
             </a>
-            <Link href="/login" className="text-slate-500 hover:text-slate-300">
-              로그인
-            </Link>
           </div>
         </div>
       </div>
