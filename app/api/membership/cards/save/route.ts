@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createTomatokHmacHeaders } from "@/lib/tomatok-hmac";
 
 type Body = {
   nft_mint?: string;
@@ -32,15 +33,41 @@ export async function POST(req: Request) {
       );
     }
 
-    const response = await fetch(process.env.MEMBERSHIP_SAVE_API_URL ?? DEFAULT_SAVE_API_URL, {
+    const saveApiUrl = process.env.MEMBERSHIP_SAVE_API_URL ?? DEFAULT_SAVE_API_URL;
+    const secret =
+      process.env.TOMATOK_IO_HMAC_SECRET?.trim() ||
+      process.env.TOMATOK_IO_HMAC_SECRET_BASE64?.trim();
+
+    if (!secret) {
+      return NextResponse.json(
+        {
+          code: "MISSING_HMAC_SECRET",
+          data: null,
+          msg: "TOMATOK_IO_HMAC_SECRET가 설정되어 있지 않습니다.",
+        },
+        { status: 500 }
+      );
+    }
+
+    const payload = JSON.stringify({
+      nft_mint: nftMint,
+      wallet_address: walletAddress,
+    });
+    const path = new URL(saveApiUrl).pathname;
+    const hmacHeaders = createTomatokHmacHeaders({
+      method: "POST",
+      path,
+      body: payload,
+      secret,
+    });
+
+    const response = await fetch(saveApiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...hmacHeaders,
       },
-      body: JSON.stringify({
-        nft_mint: nftMint,
-        wallet_address: walletAddress,
-      }),
+      body: payload,
       cache: "no-store",
     });
 
