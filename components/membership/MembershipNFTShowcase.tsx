@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { NFTCard } from "@/components/NFTCard";
 import type { MembershipCardAsset } from "@/lib/membership/filterMembershipNfts";
 
@@ -12,17 +12,10 @@ export function MembershipNFTShowcase({ items }: Props) {
   const parsed = useMemo(() => items, [items]);
 
   const [selectedId, setSelectedId] = useState(parsed[0]?.id ?? "");
-  const selected = parsed.find((item) => item.id === selectedId) ?? parsed[0] ?? null;
-
-  useEffect(() => {
-    if (!parsed.length) {
-      setSelectedId("");
-      return;
-    }
-    if (!parsed.some((item) => item.id === selectedId)) {
-      setSelectedId(parsed[0].id);
-    }
-  }, [parsed, selectedId]);
+  const resolvedSelectedId = parsed.some((item) => item.id === selectedId)
+    ? selectedId
+    : (parsed[0]?.id ?? "");
+  const selected = parsed.find((item) => item.id === resolvedSelectedId) ?? null;
 
   if (!selected) {
     return null;
@@ -32,7 +25,7 @@ export function MembershipNFTShowcase({ items }: Props) {
     <section className="mb-24 lg:mb-28">
       <h2 className="mb-6 text-2xl font-bold text-white sm:text-3xl">NFT 멤버십 카드</h2>
       <p className="mb-10 text-sm text-slate-400">
-        Helius metadata의 attributes에서 level trait를 읽어 카드 테마를 자동 적용합니다.
+        NFT metadata의 attributes에서 level trait를 읽어 카드 테마를 자동 적용합니다.
       </p>
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">

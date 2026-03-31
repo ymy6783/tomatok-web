@@ -8,6 +8,7 @@ import { NFTCardAnimated } from "@/components/membership/NFTCardAnimated";
 import { useMembershipNfts } from "@/hooks/useMembershipNfts";
 import { useRegisteredMembershipMints } from "@/hooks/useRegisteredMembershipMints";
 import { usePhantomWallet } from "@/hooks/usePhantomWallet";
+import type { MembershipCardAsset } from "@/lib/membership/filterMembershipNfts";
 
 const BASE_BENEFITS = [
   "클램핑장 현장 예약 할인",
@@ -48,7 +49,7 @@ export default function MembershipPage() {
     markRegistered,
   } = useRegisteredMembershipMints(walletAddress);
   const [selectedId, setSelectedId] = useState<string>("");
-  const [saveLoading, setSaveLoading] = useState(false);
+  const [savingMint, setSavingMint] = useState("");
   const [saveError, setSaveError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState("");
   const registeredMintSet = useMemo(() => new Set(registeredMints), [registeredMints]);
@@ -56,6 +57,45 @@ export default function MembershipPage() {
   const selectedItem = items.find((item) => item.id === selectedId) ?? null;
   const showDetail = !!selectedItem;
   const selectedItemRegistered = selectedItem ? registeredMintSet.has(selectedItem.mint) : false;
+  const saveLoading = !!savingMint;
+  const selectedItemSaving = !!selectedItem && savingMint === selectedItem.mint;
+
+  async function handleSaveItem(item: MembershipCardAsset) {
+    if (!walletAddress || registeredMintSet.has(item.mint) || saveLoading) return;
+
+    setSavingMint(item.mint);
+    setSaveError("");
+    setSaveSuccess("");
+
+    try {
+      const response = await fetch("/api/membership/cards/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nft_mint: item.mint,
+          wallet_address: walletAddress,
+        }),
+      });
+
+      const data = (await response.json()) as {
+        code?: string;
+        data?: unknown;
+        msg?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(data.msg ?? "NFT 등록 요청에 실패했습니다.");
+      }
+
+      setSaveSuccess(data.msg ?? "NFT 등록 요청이 완료되었습니다.");
+      markRegistered(item.mint);
+      void refetchRegisteredMints();
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "NFT 등록 요청 중 오류가 발생했습니다.");
+    } finally {
+      setSavingMint("");
+    }
+  }
 
   if (!walletAddress) {
     return (
@@ -74,7 +114,7 @@ export default function MembershipPage() {
                 멤버십 페이지를 확인할 수 있습니다
               </h1>
               <p className="mt-6 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
-                상단바의 팬텀 버튼으로 지갑을 연결하면 멤버십 NFT 조회와 보관 요청 기능을 사용할 수 있습니다.
+                상단바의 팬텀 버튼으로 지갑을 연결하면 멤버십 NFT 조회와 등록 기능을 사용할 수 있습니다.
               </p>
 
               {mounted && !isPhantomInstalled && (
@@ -196,7 +236,7 @@ export default function MembershipPage() {
             <div>
               <h2 className="text-2xl font-bold text-white sm:text-3xl">보유 NFT 현황</h2>
               <p className="mt-2 text-sm text-slate-400">
-                지갑을 연결하면 보유한 멤버십 NFT를 확인하고 보관 요청을 보낼 수 있습니다
+                지갑을 연결하면 보유한 멤버십 NFT를 확인하고 등록 요청을 보낼 수 있습니다
               </p>
             </div>
             {walletAddress && (
@@ -233,7 +273,7 @@ export default function MembershipPage() {
 
             {loading && (
               <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-8 text-center text-slate-400">
-                Helius에서 NFT를 조회 중입니다...
+                NFT를 조회 중입니다...
               </div>
             )}
 
@@ -251,15 +291,32 @@ export default function MembershipPage() {
 
             {!loading && !nftError && items.length > 0 && !showDetail && (
               <div>
-                <p className="mb-4 text-sm text-slate-400">카드를 선택하면 상세 정보를 확인하고 보관 요청을 보낼 수 있습니다.</p>
+                <p className="mb-4 text-sm text-slate-400">
+                  목록 카드에서 바로 등록 요청을 보내거나, 카드를 선택해 상세 정보를 확인할 수 있습니다.
+                </p>
+                {(saveSuccess || saveError) && (
+                  <div
+                    className={`mb-4 rounded-xl border px-4 py-3 text-sm ${
+                      saveError
+                        ? "border-rose-900/60 bg-rose-950/20 text-rose-300"
+                        : "border-violet-500/30 bg-violet-500/10 text-violet-200"
+                    }`}
+                  >
+                    {saveError || saveSuccess}
+                  </div>
+                )}
                 <NftCardList
                   items={items}
                   registeredMints={registeredMintSet}
                   selectedId={selectedId}
+                  savingMint={savingMint}
                   onSelect={(id) => {
                     setSaveError("");
                     setSaveSuccess("");
                     setSelectedId(id);
+                  }}
+                  onSave={(item) => {
+                    void handleSaveItem(item);
                   }}
                 />
               </div>
@@ -283,41 +340,9 @@ export default function MembershipPage() {
                     <button
                       type="button"
                       disabled={saveLoading || selectedItemRegistered}
-                      onClick={async () => {
+                      onClick={() => {
                         if (!selectedItem) return;
-
-                        setSaveLoading(true);
-                        setSaveError("");
-                        setSaveSuccess("");
-
-                        try {
-                          const response = await fetch("/api/membership/cards/save", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              nft_mint: selectedItem.mint,
-                              wallet_address: walletAddress,
-                            }),
-                          });
-
-                          const data = (await response.json()) as {
-                            code?: string;
-                            data?: unknown;
-                            msg?: string;
-                          };
-
-                          if (!response.ok) {
-                            throw new Error(data.msg ?? "NFT 보관 요청에 실패했습니다.");
-                          }
-
-                          setSaveSuccess(data.msg ?? "NFT 보관 요청이 완료되었습니다.");
-                          markRegistered(selectedItem.mint);
-                          void refetchRegisteredMints();
-                        } catch (error) {
-                          setSaveError(error instanceof Error ? error.message : "NFT 보관 요청 중 오류가 발생했습니다.");
-                        } finally {
-                          setSaveLoading(false);
-                        }
+                        void handleSaveItem(selectedItem);
                       }}
                       className={`rounded-lg px-4 py-2 text-xs font-semibold transition disabled:opacity-60 ${
                         selectedItemRegistered
@@ -325,7 +350,7 @@ export default function MembershipPage() {
                           : "border border-violet-400/50 bg-violet-500/10 text-violet-200 hover:bg-violet-500/20"
                       }`}
                     >
-                      {selectedItemRegistered ? "등록완료" : saveLoading ? "보관 요청 중..." : "NFT 보관"}
+                      {selectedItemRegistered ? "등록완료" : selectedItemSaving ? "등록 요청 중..." : "NFT 등록"}
                     </button>
                     <span className="text-slate-300">
                       선택 NFT Mint: <span className="font-mono text-white">{selectedItem.mint}</span>
@@ -365,16 +390,16 @@ export default function MembershipPage() {
           </ol>
         </section>
 
-        {/* 5) NFT 보관 방법 */}
+        {/* 5) NFT 등록 방법 */}
         <section className="mb-24 lg:mb-28">
-          <h2 className="mb-10 text-2xl font-bold text-white sm:text-3xl">NFT 보관 방법</h2>
+          <h2 className="mb-10 text-2xl font-bold text-white sm:text-3xl">NFT 등록 방법</h2>
           <ol className="space-y-6">
             {[
               "상단바의 Phantom 버튼으로 지갑 연결",
               "보유 NFT 중 TOMAKONGZ 관련 카드 목록 조회",
               "카드 1개 선택 후 상세 정보 확인",
-              "NFT 보관 버튼 클릭",
-              "외부 저장 API로 보관 요청 전달",
+              "NFT 등록 버튼 클릭",
+              "외부 저장 API로 등록 요청 전달",
             ].map((step, i) => (
               <li
                 key={step}
@@ -395,7 +420,7 @@ export default function MembershipPage() {
           <ul className="space-y-4 text-sm leading-relaxed text-slate-300 sm:text-base">
             <li className="flex gap-3">
               <span className="text-amber-500/90">•</span>
-              NFT는 지갑에 보유되어 있어야 조회 및 보관 요청 가능
+              NFT는 지갑에 보유되어 있어야 조회 및 등록 요청 가능
             </li>
             <li className="flex gap-3">
               <span className="text-amber-500/90">•</span>
@@ -411,7 +436,7 @@ export default function MembershipPage() {
             </li>
             <li className="flex gap-3">
               <span className="text-amber-500/90">•</span>
-              보관 요청 결과는 외부 API 응답 기준으로 처리
+              등록 요청 결과는 외부 API 응답 기준으로 처리
             </li>
           </ul>
         </section>

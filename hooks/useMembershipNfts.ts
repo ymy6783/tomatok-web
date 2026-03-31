@@ -6,7 +6,7 @@ import {
   type MembershipCardAsset,
 } from "@/lib/membership/filterMembershipNfts";
 
-type HeliusResponse = {
+type AssetsByOwnerResponse = {
   result?: {
     items?: unknown[];
   };
@@ -24,37 +24,18 @@ export function useMembershipNfts(ownerAddress: string) {
   const fetchMembershipNfts = useCallback(async () => {
     if (!ownerAddress) return;
 
-    const apiKey = process.env.NEXT_PUBLIC_HELIUS_API_KEY;
-    if (!apiKey) {
-      setError("NEXT_PUBLIC_HELIUS_API_KEY가 설정되어 있지 않습니다.");
-      return;
-    }
-
     setLoading(true);
     setError("");
 
     try {
-      const endpoint = `https://mainnet.helius-rpc.com/?api-key=${apiKey}`;
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: "membership-nft-check",
-          method: "getAssetsByOwner",
-          params: {
-            ownerAddress,
-            page: 1,
-            limit: 1000,
-          },
-        }),
-      });
+      const endpoint = `/api/membership/nfts?${new URLSearchParams({ ownerAddress }).toString()}`;
+      const response = await fetch(endpoint, { method: "GET" });
+      const data = (await response.json()) as AssetsByOwnerResponse;
 
       if (!response.ok) {
-        throw new Error(`Helius 요청 실패 (${response.status})`);
+        throw new Error(data?.error?.message || `NFT 조회 요청 실패 (${response.status})`);
       }
 
-      const data = (await response.json()) as HeliusResponse;
       setRawResult(data);
 
       if (data?.error?.message) {
