@@ -1,3 +1,5 @@
+import { createTomatokHmacHeaders } from "@/lib/tomatok-hmac";
+
 const DEFAULT_NOTICES_API_URL = "https://ec2.tomatok.net/api/io/notices";
 const NOTICE_PAGE_SIZE = 10;
 export const NOTICE_CATEGORIES = ["공지"] as const;
@@ -48,6 +50,10 @@ const NOTICE_TYPE_CATEGORY_MAP: Record<string, NoticeCategory> = {
   NOTICE: "공지",
 };
 
+function getTomatokSecret() {
+  return process.env.TOMATOK_IO_HMAC_SECRET?.trim() || process.env.TOMATOK_IO_HMAC_SECRET_BASE64?.trim();
+}
+
 function normalizeNoticeItem(item: NoticesApiItem): NoticeItem | null {
   const id = String(item.io_notices_uid ?? "").trim();
   if (!id) return null;
@@ -74,8 +80,23 @@ function getNoticesApiUrl(page: number) {
 
 async function fetchNoticesApiPage(page: number) {
   const safePage = Math.max(1, Math.floor(page) || 1);
-  const response = await fetch(getNoticesApiUrl(safePage), {
+  const url = getNoticesApiUrl(safePage);
+  const secret = getTomatokSecret();
+
+  if (!secret) {
+    throw new Error("TOMATOK_IO_HMAC_SECRET가 설정되어 있지 않습니다.");
+  }
+
+  const hmacHeaders = createTomatokHmacHeaders({
     method: "GET",
+    path: url.pathname,
+    body: "",
+    secret,
+  });
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: hmacHeaders,
     cache: "no-store",
   });
 

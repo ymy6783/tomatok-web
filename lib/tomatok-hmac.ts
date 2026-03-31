@@ -24,6 +24,7 @@ export function createTomatokHmacHeaders({
   const signature = createHmac("sha256", secret).update(signingPayload, "utf8").digest("hex");
 
   return {
+    "X-Client-Id": "tomatok-io",
     "X-Tomatok-Timestamp": timestamp,
     "X-Tomatok-Nonce": nonce,
     "X-Tomatok-Signature": signature,
