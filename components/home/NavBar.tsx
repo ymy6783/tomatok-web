@@ -8,7 +8,7 @@ import { ConnectPhantomButton } from "@/components/membership/ConnectPhantomButt
 import { usePhantomWallet } from "@/hooks/usePhantomWallet";
 
 const navItems = [
-  { label: "WHITE PAPER", href: "/whitepaper", hasChevron: true },
+  { label: "WHITE PAPER", href: "/whitepaper" },
   { label: "MEMBERSHIP", href: "/membership" },
   { label: "NOTICE", href: "/notice" },
 ] as const;
@@ -60,15 +60,6 @@ export function NavBar({ variant = "default" }: NavBarProps) {
                 }`}
               >
                 {item.label}
-                {"hasChevron" in item && item.hasChevron && (
-                  <svg className="h-3.5 w-3.5 opacity-90" fill="currentColor" viewBox="0 0 20 20">
-                    <path
-                      fillRule="evenodd"
-                      d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                )}
               </Link>
             ))}
           </nav>
@@ -115,15 +106,6 @@ export function NavBar({ variant = "default" }: NavBarProps) {
                 onClick={() => setOpen(false)}
               >
                 {item.label}
-                {"hasChevron" in item && item.hasChevron && (
-                  <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path
-                      fillRule="evenodd"
-                      d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                )}
               </Link>
             ))}
           </nav>

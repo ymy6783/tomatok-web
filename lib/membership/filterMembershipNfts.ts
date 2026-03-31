@@ -42,6 +42,30 @@ function extractAttributes(asset: UnknownRecord): NFTAttributeLike[] {
   return Array.isArray(attrs) ? (attrs as NFTAttributeLike[]) : [];
 }
 
+function inferMembershipLevel(asset: UnknownRecord): MembershipLevelStyle | null {
+  const blob = JSON.stringify({
+    name: asset.name,
+    symbol: asset.symbol,
+    content: asset.content,
+    collection: asset.collection,
+    grouping: asset.grouping,
+  }).toLowerCase();
+
+  if (blob.includes("lv3") || blob.includes("level3") || blob.includes("gold")) {
+    return { level: "lv3", label: "LV.3", theme: "gold" };
+  }
+
+  if (blob.includes("lv2") || blob.includes("level2") || blob.includes("silver")) {
+    return { level: "lv2", label: "LV.2", theme: "silver" };
+  }
+
+  if (blob.includes("lv1") || blob.includes("level1") || blob.includes("white")) {
+    return { level: "lv1", label: "LV.1", theme: "white" };
+  }
+
+  return null;
+}
+
 export function containsTomakongz(assetLike: unknown): boolean {
   const asset = asRecord(assetLike);
   const content = asRecord(asset.content);
@@ -149,7 +173,9 @@ export function filterMembershipNfts(items: unknown[]): MembershipCardAsset[] {
     const asset = asRecord(item);
     if (!containsTomakongz(asset)) continue;
 
-    const levelInfo = getMembershipLevelFromAttributes(extractAttributes(asset));
+    const levelInfo =
+      getMembershipLevelFromAttributes(extractAttributes(asset)) ||
+      inferMembershipLevel(asset);
     if (!levelInfo) continue;
 
     result.push({
