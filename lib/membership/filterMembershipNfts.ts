@@ -66,6 +66,10 @@ function inferMembershipLevel(asset: UnknownRecord): MembershipLevelStyle | null
   return null;
 }
 
+function getDefaultMembershipLevel(): MembershipLevelStyle {
+  return { level: "lv1", label: "LV.1", theme: "white" };
+}
+
 export function containsTomakongz(assetLike: unknown): boolean {
   const asset = asRecord(assetLike);
   const content = asRecord(asset.content);
@@ -176,7 +180,7 @@ export function filterMembershipNfts(items: unknown[]): MembershipCardAsset[] {
     const levelInfo =
       getMembershipLevelFromAttributes(extractAttributes(asset)) ||
       inferMembershipLevel(asset);
-    if (!levelInfo) continue;
+    const resolvedLevelInfo = levelInfo ?? getDefaultMembershipLevel();
 
     result.push({
       id:
@@ -187,9 +191,9 @@ export function filterMembershipNfts(items: unknown[]): MembershipCardAsset[] {
       image: extractImage(asset),
       title: extractTitle(asset),
       seriesName: extractSeriesName(asset),
-      level: levelInfo.level,
-      label: levelInfo.label,
-      theme: levelInfo.theme,
+      level: resolvedLevelInfo.level,
+      label: resolvedLevelInfo.label,
+      theme: resolvedLevelInfo.theme,
       rawAsset: item,
     });
   }
