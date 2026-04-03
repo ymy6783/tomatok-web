@@ -162,7 +162,7 @@ export default function MembershipPage() {
         </section>
 
         {/* 2) 3개 카드 */}
-        <section className="mb-28 lg:mb-36">
+        <section id="vip" className="mb-28 scroll-mt-28 lg:mb-36">
           <div className="grid gap-8 md:grid-cols-3 md:items-stretch">
             {TIERS.map((tier) => (
               <article
@@ -231,7 +231,7 @@ export default function MembershipPage() {
           </ul>
         </section>
 
-        <section className="mb-24 rounded-2xl border border-slate-800 bg-black/30 p-6 sm:p-8 lg:mb-28">
+        <section id="nft" className="mb-24 scroll-mt-28 rounded-2xl border border-slate-800 bg-black/30 p-6 sm:p-8 lg:mb-28">
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="text-2xl font-bold text-white sm:text-3xl">보유 NFT 현황</h2>

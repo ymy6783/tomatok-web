@@ -9,8 +9,24 @@ import { usePhantomWallet } from "@/hooks/usePhantomWallet";
 
 const navItems = [
   { label: "WHITE PAPER", href: "/whitepaper" },
-  { label: "MEMBERSHIP", href: "/membership" },
   { label: "NOTICE", href: "/notice" },
+] as const;
+
+const iconNavItems = [
+  {
+    href: "/membership#nft",
+    src: "/images/nft_icon.svg",
+    alt: "NFT",
+    width: 64,
+    height: 64,
+  },
+  {
+    href: "/membership#vip",
+    src: "/images/vip_icon.svg",
+    alt: "VIP",
+    width: 425,
+    height: 163,
+  },
 ] as const;
 
 type NavBarProps = {
@@ -50,12 +66,30 @@ export function NavBar({ variant = "default" }: NavBarProps) {
 
         <div className="hidden items-center gap-5 md:flex">
           <ConnectPhantomButton size="compact" />
-          <nav className="flex items-center gap-8">
+          <nav className="flex items-center gap-6 leading-none" aria-label="주 메뉴">
+            {iconNavItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex shrink-0 translate-y-[5px] items-center justify-center rounded-lg px-0.5 transition hover:opacity-85 ${
+                  isOverlay ? "opacity-95 hover:opacity-100" : "opacity-90 hover:opacity-100"
+                }`}
+              >
+                <Image
+                  src={item.src}
+                  alt={item.alt}
+                  width={item.width}
+                  height={item.height}
+                  className="block h-8 w-auto max-h-8 max-w-[min(42vw,160px)] shrink-0 object-contain object-center"
+                  sizes="(max-width: 768px) 42vw, 160px"
+                />
+              </Link>
+            ))}
             {navItems.map((item) => (
               <Link
                 key={item.label}
                 href={item.href}
-                className={`flex items-center gap-1 text-xs font-semibold tracking-widest transition hover:opacity-80 ${
+                className={`flex items-center text-xs font-semibold tracking-widest transition hover:opacity-80 ${
                   isOverlay ? "text-white" : "text-slate-300 hover:text-white"
                 }`}
               >
@@ -67,6 +101,24 @@ export function NavBar({ variant = "default" }: NavBarProps) {
 
         <div className="flex items-center gap-2 md:hidden">
           <ConnectPhantomButton size="compact" />
+          <nav className="flex items-center gap-1.5 leading-none" aria-label="NFT · VIP">
+            {iconNavItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex shrink-0 translate-y-[5px] items-center justify-center rounded-md px-0.5 opacity-95 transition hover:opacity-100"
+              >
+                <Image
+                  src={item.src}
+                  alt={item.alt}
+                  width={item.width}
+                  height={item.height}
+                  className="block h-7 w-auto max-h-7 max-w-[min(36vw,140px)] shrink-0 object-contain object-center"
+                  sizes="(max-width: 768px) 36vw, 140px"
+                />
+              </Link>
+            ))}
+          </nav>
           <button
             type="button"
             className={`inline-flex items-center justify-center rounded-lg p-2 ${
@@ -96,6 +148,25 @@ export function NavBar({ variant = "default" }: NavBarProps) {
           }`}
         >
           <nav className="flex flex-col gap-1">
+            {iconNavItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center rounded-lg px-3 py-3 ${
+                  isOverlay ? "hover:bg-white/10" : "hover:bg-slate-800/80"
+                }`}
+                onClick={() => setOpen(false)}
+              >
+                <Image
+                  src={item.src}
+                  alt={item.alt}
+                  width={item.width}
+                  height={item.height}
+                  className="block h-9 w-auto max-h-9 max-w-[200px] shrink-0 object-contain object-center"
+                  sizes="200px"
+                />
+              </Link>
+            ))}
             {navItems.map((item) => (
               <Link
                 key={item.label}
