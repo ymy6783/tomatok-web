@@ -68,8 +68,8 @@ export function MembershipNFTShowcase({ items }: Props) {
               image={selected.image}
               title="TOMAKONGZ"
               subtitle="MEMBERSHIP PASS"
-              level={selected.label}
-              theme={selected.theme}
+              level={selected.label ?? "—"}
+              theme={selected.theme ?? undefined}
               className="p-0"
             />
           </div>

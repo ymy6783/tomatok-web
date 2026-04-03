@@ -13,7 +13,7 @@ type Props = {
 };
 
 export function NFTCardStatic({ item, registered, selected, saving, onSelect, onSave }: Props) {
-  const theme = MEMBERSHIP_THEME_CLASSES[item.theme];
+  const theme = MEMBERSHIP_THEME_CLASSES[item.theme ?? "white"];
 
   return (
     <div

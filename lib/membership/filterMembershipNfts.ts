@@ -9,9 +9,9 @@ export type MembershipCardAsset = {
   image: string;
   title: string;
   seriesName: string;
-  level: MembershipLevelStyle["level"];
-  label: MembershipLevelStyle["label"];
-  theme: MembershipLevelStyle["theme"];
+  level: MembershipLevelStyle["level"] | null;
+  label: MembershipLevelStyle["label"] | null;
+  theme: MembershipLevelStyle["theme"] | null;
   rawAsset: unknown;
 };
 
@@ -40,34 +40,6 @@ function extractAttributes(asset: UnknownRecord): NFTAttributeLike[] {
   const metadata = asRecord(content.metadata);
   const attrs = metadata.attributes;
   return Array.isArray(attrs) ? (attrs as NFTAttributeLike[]) : [];
-}
-
-function inferMembershipLevel(asset: UnknownRecord): MembershipLevelStyle | null {
-  const blob = JSON.stringify({
-    name: asset.name,
-    symbol: asset.symbol,
-    content: asset.content,
-    collection: asset.collection,
-    grouping: asset.grouping,
-  }).toLowerCase();
-
-  if (blob.includes("lv3") || blob.includes("level3") || blob.includes("gold")) {
-    return { level: "lv3", label: "LV.3", theme: "gold" };
-  }
-
-  if (blob.includes("lv2") || blob.includes("level2") || blob.includes("silver")) {
-    return { level: "lv2", label: "LV.2", theme: "silver" };
-  }
-
-  if (blob.includes("lv1") || blob.includes("level1") || blob.includes("white")) {
-    return { level: "lv1", label: "LV.1", theme: "white" };
-  }
-
-  return null;
-}
-
-function getDefaultMembershipLevel(): MembershipLevelStyle {
-  return { level: "lv1", label: "LV.1", theme: "white" };
 }
 
 export function containsTomakongz(assetLike: unknown): boolean {
@@ -177,10 +149,7 @@ export function filterMembershipNfts(items: unknown[]): MembershipCardAsset[] {
     const asset = asRecord(item);
     if (!containsTomakongz(asset)) continue;
 
-    const levelInfo =
-      getMembershipLevelFromAttributes(extractAttributes(asset)) ||
-      inferMembershipLevel(asset);
-    const resolvedLevelInfo = levelInfo ?? getDefaultMembershipLevel();
+    const levelInfo = getMembershipLevelFromAttributes(extractAttributes(asset));
 
     result.push({
       id:
@@ -191,9 +160,9 @@ export function filterMembershipNfts(items: unknown[]): MembershipCardAsset[] {
       image: extractImage(asset),
       title: extractTitle(asset),
       seriesName: extractSeriesName(asset),
-      level: resolvedLevelInfo.level,
-      label: resolvedLevelInfo.label,
-      theme: resolvedLevelInfo.theme,
+      level: levelInfo?.level ?? null,
+      label: levelInfo?.label ?? null,
+      theme: levelInfo?.theme ?? null,
       rawAsset: item,
     });
   }
